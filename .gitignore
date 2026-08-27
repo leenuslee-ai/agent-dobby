@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project-specific cache and vector DB
+backtest_cache/
+chroma_db/
