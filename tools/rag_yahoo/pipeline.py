@@ -3,15 +3,17 @@
 from datetime import datetime, timezone
 from .ingestion import ingest_news
 from .vector_store import upsert_articles
-from agents.research_agent import analyze
-from config import TICKERS
+from agents.research_agent import ResearchAgent
+from config import get_tickers
 
 
 def run_pipeline(
-    tickers: list[str] = TICKERS,
+    tickers: list[str] | None = None,
     question: str | None = None,
     since: datetime | None = None,
 ):
+    if tickers is None:
+        tickers = get_tickers()
     print("=" * 60)
     print("Step 1: Ingesting news from Yahoo Finance...")
     articles = ingest_news(tickers, since=since)
@@ -24,7 +26,7 @@ def run_pipeline(
     q = question or f"Analyze {', '.join(tickers[:3])} and give me your best trade recommendation."
     print(f"Step 3: Running agent...\nQuestion: {q}\n")
     print("=" * 60)
-    answer = analyze(q)
+    answer = ResearchAgent().analyze(q)
     print(answer)
 
 

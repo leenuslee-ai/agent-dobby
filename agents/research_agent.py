@@ -1,5 +1,8 @@
 """LangGraph agent that uses RAG + price data to make BUY/SELL/HOLD decisions."""
 
+import json
+import re
+
 import yfinance as yf
 from typing import Annotated, TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -10,7 +13,6 @@ from langgraph.prebuilt import ToolNode
 
 from config import ANTHROPIC_API_KEY, AGENT_MODEL, MODEL_PROVIDER
 from tools.rag_yahoo import semantic_search
-from tools.alpaca import TRADING_TOOLS
 
 
 # ── Tools ────────────────────────────────────────────────────────────────────
@@ -46,6 +48,8 @@ def get_stock_price(ticker: str) -> str:
         return f"Could not fetch price for {ticker}: {e}"
 
 
+RESEARCH_TOOLS = [search_news, get_stock_price]
+
 # ── LLM factory ──────────────────────────────────────────────────────────────
 
 def _build_llm(tools: list):
@@ -68,54 +72,15 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-# ── Graph setup ──────────────────────────────────────────────────────────────
+# ── System prompts ───────────────────────────────────────────────────────────
 
-tools = [search_news, get_stock_price] + TRADING_TOOLS
-tool_node = ToolNode(tools)
-llm = _build_llm(tools)
-
-SYSTEM_PROMPT = """You are a financial analysis and trading agent. When given a ticker or question:
+_SYSTEM_PROMPT = """You are a financial research agent. When given a ticker or question:
 1. Use search_news to retrieve relevant recent news from the vector database.
 2. Use get_stock_price to get current market data.
-3. Use get_account_info and get_positions to understand current portfolio state.
-4. Synthesize the information and provide a clear BUY / SELL / HOLD recommendation with reasoning.
-5. Only execute buy_market_order or sell_market_order if the user explicitly asks you to place a trade.
-Always cite the news sources you used. Be concise but thorough.
-IMPORTANT: Never place a real trade unless the user explicitly confirms they want to execute an order."""
+3. Synthesize the information and provide a clear BUY / SELL / HOLD recommendation with reasoning.
+Always cite the news sources you used. Be concise but thorough."""
 
-
-def call_model(state: AgentState) -> AgentState:
-    messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
-    response = llm.invoke(messages)
-    return {"messages": [response]}
-
-
-def should_continue(state: AgentState) -> str:
-    last = state["messages"][-1]
-    if hasattr(last, "tool_calls") and last.tool_calls:
-        return "tools"
-    return END
-
-
-graph = StateGraph(AgentState)
-graph.add_node("agent", call_model)
-graph.add_node("tools", tool_node)
-graph.set_entry_point("agent")
-graph.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
-graph.add_edge("tools", "agent")
-
-app = graph.compile()
-
-
-# ── Public API ───────────────────────────────────────────────────────────────
-
-def analyze(question: str) -> str:
-    """Run the agent on a question and return the final text response."""
-    result = app.invoke({"messages": [HumanMessage(content=question)]})
-    return result["messages"][-1].content
-
-
-RECOMMENDATION_PROMPT = """You are a financial analysis agent. Analyse the ticker in the user's question using
+_RECOMMENDATION_PROMPT = """You are a financial analysis agent. Analyse the ticker in the user's question using
 the available tools (news search + price data), then respond with ONLY a JSON object in this exact format:
 {{
   "recommendation": "<BUY|SELL|HOLD|WAIT>",
@@ -124,45 +89,76 @@ the available tools (news search + price data), then respond with ONLY a JSON ob
 No prose, no markdown, no explanation outside the JSON."""
 
 
-def analyze_recommendation(question: str) -> dict:
-    """Run the agent and return a structured BUY/SELL/HOLD/WAIT recommendation.
+# ── Graph builder ────────────────────────────────────────────────────────────
 
-    The agent uses news from the vector DB and live price data to make its
-    decision, then returns a plain dict with 'recommendation' and 'reason'.
+def _build_graph():
+    llm = _build_llm(RESEARCH_TOOLS)
+    tool_node = ToolNode(RESEARCH_TOOLS)
 
-    Prompts that trigger this method:
-      - "Should I buy NVDA?"
-      - "Give me a recommendation on AAPL"
-      - "Is TSLA worth buying right now?"
-      - "What's your call on AMD — buy, sell, or hold?"
-      - "Rate MSFT: buy or sell?"
-    """
-    import json, re
+    def call_model(state: AgentState) -> AgentState:
+        messages = [SystemMessage(content=_SYSTEM_PROMPT)] + state["messages"]
+        response = llm.invoke(messages)
+        return {"messages": [response]}
 
-    result = app.invoke({
-        "messages": [
-            SystemMessage(content=RECOMMENDATION_PROMPT),
-            HumanMessage(content=question),
-        ]
-    })
-    content = result["messages"][-1].content
+    def should_continue(state: AgentState) -> str:
+        last = state["messages"][-1]
+        if hasattr(last, "tool_calls") and last.tool_calls:
+            return "tools"
+        return END
 
-    # Extract JSON even if the LLM wrapped it in markdown fences
-    match = re.search(r"\{.*\}", content, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            pass
+    graph = StateGraph(AgentState)
+    graph.add_node("agent", call_model)
+    graph.add_node("tools", tool_node)
+    graph.set_entry_point("agent")
+    graph.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
+    graph.add_edge("tools", "agent")
+    return graph.compile()
 
-    # Fallback if parsing fails
-    return {"recommendation": "WAIT", "reason": content.strip()}
+
+# ── Public class ─────────────────────────────────────────────────────────────
+
+class ResearchAgent:
+    def __init__(self):
+        self._graph = _build_graph()
+
+    def analyze(self, question: str) -> str:
+        """Run the agent on a question and return the final text response."""
+        result = self._graph.invoke({"messages": [HumanMessage(content=question)]})
+        return result["messages"][-1].content
+
+    def analyze_recommendation(self, question: str) -> dict:
+        """Run the agent and return a structured BUY/SELL/HOLD/WAIT recommendation.
+
+        Prompts that trigger this method:
+          - "Should I buy NVDA?"
+          - "Give me a recommendation on AAPL"
+          - "Is TSLA worth buying right now?"
+          - "What's your call on AMD — buy, sell, or hold?"
+          - "Rate MSFT: buy or sell?"
+        """
+        result = self._graph.invoke({
+            "messages": [
+                SystemMessage(content=_RECOMMENDATION_PROMPT),
+                HumanMessage(content=question),
+            ]
+        })
+        content = result["messages"][-1].content
+
+        match = re.search(r"\{.*\}", content, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+
+        return {"recommendation": "WAIT", "reason": content.strip()}
 
 
 if __name__ == "__main__":
-    import json
+    agent = ResearchAgent()
+
     print("=== analyze ===")
-    print(analyze("Should I buy NVDA right now? Check the latest news and price."))
+    print(agent.analyze("Should I buy NVDA right now? Check the latest news and price."))
 
     print("\n=== analyze_recommendation ===")
-    print(json.dumps(analyze_recommendation("Should I buy NVDA?"), indent=2))
+    print(json.dumps(agent.analyze_recommendation("Should I buy NVDA?"), indent=2))

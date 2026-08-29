@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 import feedparser
-from config import ANTHROPIC_API_KEY, TICKERS, SUMMARIZE_MODEL, MODEL_PROVIDER
+from config import ANTHROPIC_API_KEY, SUMMARIZE_MODEL, MODEL_PROVIDER, get_tickers
 
 _PROMPT_TEMPLATE = """\
 This article was retrieved because it is relevant to stock {ticker}.
@@ -133,7 +133,9 @@ def fetch_yahoo_rss(ticker: str, since: datetime | None = None) -> list[dict]:
     return articles
 
 
-def ingest_news(tickers: list[str] = TICKERS, since: datetime | None = None) -> list[dict]:
+def ingest_news(tickers: list[str] | None = None, since: datetime | None = None) -> list[dict]:
+    if tickers is None:
+        tickers = get_tickers()
     print(f"Using provider: {MODEL_PROVIDER} | summarize model: {SUMMARIZE_MODEL}")
     if since:
         print(f"Filtering articles published after: {since.strftime('%Y-%m-%d %H:%M %Z')}")

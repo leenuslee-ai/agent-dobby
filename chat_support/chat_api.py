@@ -100,7 +100,8 @@ def login(req: LoginRequest) -> LoginResponse:
 def whatnext(req: WhatNextRequest) -> WhatNextResponse:
     _require_session(req.threadId)
     result = _agent.invoke(thread_id=req.threadId, message=req.message)
-    return WhatNextResponse(threadId=req.threadId, response=result)
+    response = result if isinstance(result, dict) else {"message": result}
+    return WhatNextResponse(threadId=req.threadId, response=response)
 
 
 # ── Setup CRUD endpoints ──────────────────────────────────────────────────────

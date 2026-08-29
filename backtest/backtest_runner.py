@@ -17,7 +17,7 @@ from pathlib import Path
 import pandas as pd
 
 from .backtester import Backtester, Setup, build_example_setup, build_ema_pullback_setup
-from config import TICKERS
+from config import get_tickers
 
 
 def run_multi(
@@ -78,7 +78,7 @@ def run_multi(
 
 
 if __name__ == "__main__":
-    tickers = sys.argv[1:] if len(sys.argv) > 1 else TICKERS
+    tickers = sys.argv[1:] if len(sys.argv) > 1 else get_tickers()
 
     # Switch setup here — e.g. build_ema_pullback_setup() or build_example_setup()
     setup = build_ema_pullback_setup()

@@ -87,6 +87,8 @@ overrides==7.7.0
 packaging==26.3
 pandas==3.0.5
 peewee==4.3.0
+psycopg2-binary==2.9.11
+sqlalchemy==2.0.41
 pillow==12.3.0
 platformdirs==4.11.1
 propcache==0.5.2
