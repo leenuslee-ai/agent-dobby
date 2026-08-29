@@ -45,6 +45,11 @@ MODELS = {
         "summarize": "qwen3.5:9b",   # ollama pull qwen3:4b
         "agent":     "qwen3.5:9b",   # ollama pull qwen3:4b
     },
+    "gemma": {
+        "summarize": "gemma4:26b-a4b",   # ollama pull qwen3:4b
+        "agent":     "gemma4:26b-a4b",   # ollama pull gemma3:7b or gemma4:26b-a4b
+    }
+
 }
 
 SUMMARIZE_MODEL = MODELS[MODEL_PROVIDER]["summarize"]

@@ -27,22 +27,20 @@ import asyncio
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated, TypedDict
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_mcp_adapters.client import MultiServerMCPClient
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 
-from config import (
-    ANTHROPIC_API_KEY,
-    AGENT_MODEL,
-    MODEL_PROVIDER,
-    ALPHAVANTAGE_API_KEY,
-    ALPHAVANTAGE_MCP_TRANSPORT,
-    ALPHAVANTAGE_MCP_SSE_URL,
-    ALPHAVANTAGE_MCP_COMMAND,
-    ALPHAVANTAGE_MCP_ARGS,
+from config import ANTHROPIC_API_KEY, AGENT_MODEL, MODEL_PROVIDER
+from tools.alphavantage.alphavantage_mcp_tools import (
+    get_mcp_tools,
+    build_tool_node,
+    build_mcp_server_config,
 )
 
 # MCP tool calling requires reliable structured output.
@@ -50,33 +48,6 @@ from config import (
 # text descriptions instead of proper tool call payloads.
 _MCP_PROVIDER = os.getenv("MCP_AGENT_PROVIDER", "anthropic").lower()
 _MCP_MODEL    = os.getenv("MCP_AGENT_MODEL", AGENT_MODEL if MODEL_PROVIDER == "anthropic" else "claude-sonnet-4-6")
-
-
-# ── MCP server config ─────────────────────────────────────────────────────────
-
-def _build_mcp_server_config() -> dict:
-    """Build the MultiServerMCPClient server config from .env settings."""
-    if ALPHAVANTAGE_MCP_TRANSPORT in ("sse", "streamable_http"):
-        # Alpha Vantage hosted MCP server uses Streamable HTTP (MCP spec 2025-03-26).
-        # The API key is passed as a query param: https://mcp.alphavantage.co/mcp?apikey=KEY
-        url = ALPHAVANTAGE_MCP_SSE_URL
-        if ALPHAVANTAGE_API_KEY and "apikey=" not in url:
-            url = f"{url}?apikey={ALPHAVANTAGE_API_KEY}"
-        return {
-            "alphavantage": {
-                "transport": "streamable_http",
-                "url": url,
-            }
-        }
-    # stdio: spawn a local subprocess
-    return {
-        "alphavantage": {
-            "transport": "stdio",
-            "command": ALPHAVANTAGE_MCP_COMMAND,
-            "args": ALPHAVANTAGE_MCP_ARGS.split(),
-            "env": {"ALPHAVANTAGE_API_KEY": ALPHAVANTAGE_API_KEY},
-        }
-    }
 
 
 # ── LLM factory ───────────────────────────────────────────────────────────────
@@ -114,54 +85,31 @@ Always state which tools you called and what values you observed.
 Format your final answer with clear sections: Price, Technicals, Fundamentals (if relevant), Summary."""
 
 
-# ── Graph builder (async — required by MCP client) ────────────────────────────
+# ── Agent runner ──────────────────────────────────────────────────────────────
 
 async def run_agent(question: str) -> str:
     """Connect to the Alpha Vantage MCP server, build the agent, run it, return the answer."""
 
-    server_config = _build_mcp_server_config()
-    transport = ALPHAVANTAGE_MCP_TRANSPORT.upper()
+    server_config = build_mcp_server_config()
+    transport = os.getenv("ALPHAVANTAGE_MCP_TRANSPORT", "streamable_http").upper()
 
     print(f"\n{'='*70}")
     print(f"Alpha Vantage MCP Agent | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Transport : {transport}")
-    if transport in ("SSE", "STREAMABLE_HTTP"):
-        print(f"Server URL: {ALPHAVANTAGE_MCP_SSE_URL}")
-    else:
-        print(f"Command   : {ALPHAVANTAGE_MCP_COMMAND} {ALPHAVANTAGE_MCP_ARGS}")
     print(f"LLM       : {_MCP_PROVIDER.upper()} / {_MCP_MODEL}")
     print(f"{'='*70}")
     print(f"Question  : {question}\n")
 
-    mcp_client = MultiServerMCPClient(server_config)
-    tools = await mcp_client.get_tools()
+    tools, tool_map = await get_mcp_tools()
     print(f"Tools loaded from MCP server ({len(tools)}): {[t.name for t in tools]}\n")
 
     llm = _build_llm(tools)
-    tool_map = {t.name: t for t in tools}
-
-    # ── Graph (fully async — MCP tools only support ainvoke) ───────────────
+    call_tools = build_tool_node(tool_map)
 
     async def call_model(state: AgentState) -> AgentState:
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
         response = await llm.ainvoke(messages)
         return {"messages": [response]}
-
-    async def call_tools(state: AgentState) -> AgentState:
-        """Async tool node — required because MCP tools only support ainvoke."""
-        last = state["messages"][-1]
-        results = []
-        for tc in last.tool_calls:
-            tool = tool_map.get(tc["name"])
-            if tool is None:
-                output = f"Tool '{tc['name']}' not found."
-            else:
-                try:
-                    output = await tool.ainvoke(tc["args"])
-                except Exception as e:
-                    output = f"Error calling {tc['name']}: {e}"
-            results.append(ToolMessage(content=str(output), tool_call_id=tc["id"]))
-        return {"messages": results}
 
     def should_continue(state: AgentState) -> str:
         last = state["messages"][-1]

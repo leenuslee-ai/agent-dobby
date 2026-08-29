@@ -75,6 +75,7 @@ class Backtester:
         self.equity_curve: list[float] = []
 
         df = get_ohlcv_with_indicators(self.ticker, lookback_days=lookback_days)
+
         if start_date:
             df = df[df.index >= pd.Timestamp(start_date)]
         if end_date:
@@ -135,6 +136,8 @@ class Backtester:
                 for label, cond_fn in self.setup.entry_conditions:
                     try:
                         result = bool(cond_fn(row))
+                        print("Condition")
+                        print(row.to_string())
                     except Exception:
                         result = False
                     if result:
@@ -311,7 +314,7 @@ if __name__ == "__main__":
         setup=setup,
         start_date=start_date,
         initial_equity=100_000,
-        lookback_days=800,
+        lookback_days=200,
     )
 
     metrics = bt.run()

@@ -119,7 +119,7 @@ if __name__ == "__main__":
         thread_id="test-thread-2",
         message=(
             "Run a backtest for AAPL over the last 30 days "
-            "using the '20 EMA Pullback' setup and show me the results."
+            "using the 'RSI14_Below30' setup and show me the results."
         ),
     )
     print(json.dumps(response2, indent=2))

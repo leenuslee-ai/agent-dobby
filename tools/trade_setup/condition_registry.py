@@ -18,8 +18,11 @@ Available column names in expressions: any column produced by backtest_data.py
   sma_20, sma_50, sma_200, ema_12, ema_20, ema_26, adx,
   bb_upper, bb_lower, bb_middle, bb_pct, atr, obv,
   stoch_k, stoch_d, price_above_sma50, price_above_sma200,
-  golden_cross, death_cross, ema20_rising, touched_ema20,
-  closed_above_ema20, hammer, bullish_engulfing
+  golden_cross, death_cross,
+  ema12_rising, ema20_rising, ema26_rising,
+  touched_ema12, touched_ema20, touched_ema26,
+  closed_above_ema12, closed_above_ema20, closed_above_ema26,
+  hammer, bullish_engulfing
 """
 
 from __future__ import annotations
@@ -106,10 +109,11 @@ REGISTRY: dict[str, ConditionFactory] = {
     "golden_cross":         lambda p: (lambda r: bool(r["golden_cross"])),
     "death_cross":          lambda p: (lambda r: bool(r["death_cross"])),
 
-    # ── EMA-20 pullback signals ───────────────────────────────────────────────
-    "ema20_rising":         lambda p: (lambda r: bool(r["ema20_rising"])),
-    "touched_ema20":        lambda p: (lambda r: bool(r["touched_ema20"])),
-    "closed_above_ema20":   lambda p: (lambda r: bool(r["closed_above_ema20"])),
+    # ── EMA pullback signals ──────────────────────────────────────────────────
+    # params: {"window": 20}  — defaults to 20 if not specified
+    "ema_rising":           lambda p: (lambda r: bool(r[f"ema{p.get('window', 20)}_rising"])),
+    "touched_ema":          lambda p: (lambda r: bool(r[f"touched_ema{p.get('window', 20)}"])),
+    "closed_above_ema":     lambda p: (lambda r: bool(r[f"closed_above_ema{p.get('window', 20)}"])),
 
     # ── Candlestick patterns ─────────────────────────────────────────────────
     "hammer":               lambda p: (lambda r: bool(r["hammer"])),

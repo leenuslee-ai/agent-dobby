@@ -50,7 +50,7 @@ def setup_from_dict(data: dict) -> Setup:
         ]
 
     return Setup(
-        name=data["name"],
+        name=data.get("name", ""),
         entry_conditions=build(data["entry_conditions"]),
         exit_conditions=build(data["exit_conditions"]),
         stop_loss_pct=data["stop_loss_pct"],

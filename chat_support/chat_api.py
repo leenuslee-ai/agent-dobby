@@ -101,6 +101,8 @@ def whatnext(req: WhatNextRequest) -> WhatNextResponse:
     _require_session(req.threadId)
     result = _agent.invoke(thread_id=req.threadId, message=req.message)
     response = result if isinstance(result, dict) else {"message": result}
+    print("whatnext Response")
+    print(response)
     return WhatNextResponse(threadId=req.threadId, response=response)
 
 

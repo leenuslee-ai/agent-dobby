@@ -120,36 +120,34 @@ def _add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["golden_cross"]        = (df["sma_50"] > df["sma_200"]) & (df["sma_50"].shift(1) <= df["sma_200"].shift(1))
     df["death_cross"]         = (df["sma_50"] < df["sma_200"]) & (df["sma_50"].shift(1) >= df["sma_200"].shift(1))
 
-    # ── EMA 20 Pullback signals ───────────────────────────────────────────────
-    # EMA-20 is rising (today's value > value 5 bars ago)
-    df["ema20_rising"]        = df["ema_20"] > df["ema_20"].shift(5)
-
-    # Price touched or pierced the 20 EMA on the low (pullback zone)
-    df["touched_ema20"]       = low <= df["ema_20"]
-
-    # Close recovered back above EMA-20 after touching it
-    df["closed_above_ema20"]  = close > df["ema_20"]
+    # ── EMA pullback signals (generated for every EMA window computed above) ────
+    for window in [12, 20, 26]:
+        ema_col = f"ema_{window}"
+        df[f"ema{window}_rising"]       = df[ema_col] > df[ema_col].shift(5)
+        df[f"touched_ema{window}"]      = low <= df[ema_col]
+        df[f"closed_above_ema{window}"] = close > df[ema_col]
 
     # Hammer: lower wick >= 2× body; upper wick <= body; body in upper 1/3 of range
+    op            = df["open"]
     candle_range  = high - low
-    body          = (close - open).abs()
-    lower_wick    = open.where(close >= open, close) - low   # min(open,close) - low
-    upper_wick    = high - close.where(close >= open, open)  # high - max(open,close)
+    body          = (close - op).abs()
+    lower_wick    = op.where(close >= op, close) - low
+    upper_wick    = high - close.where(close >= op, op)
     df["hammer"]  = (
         (candle_range > 0) &
         (lower_wick >= 2 * body) &
         (upper_wick <= body) &
-        (close > open)           # must close up (bullish hammer)
+        (close > op)
     )
 
     # Bullish engulfing: prev bar bearish, current bar bullish & body wraps prev body
-    prev_open  = open.shift(1)
+    prev_open  = op.shift(1)
     prev_close = close.shift(1)
     df["bullish_engulfing"] = (
-        (prev_close < prev_open) &   # previous bar was bearish
-        (close > open) &             # current bar is bullish
-        (open <= prev_close) &       # current open at or below prev close
-        (close >= prev_open)         # current close at or above prev open
+        (prev_close < prev_open) &
+        (close > op) &
+        (op <= prev_close) &
+        (close >= prev_open)
     )
 
     return df
@@ -176,5 +174,5 @@ def get_ohlcv_with_indicators(ticker: str, lookback_days: int = 365) -> pd.DataF
 
 
 if __name__ == "__main__":
-    df = get_ohlcv_with_indicators("AAPL", lookback_days=365)
+    df = get_ohlcv_with_indicators("NVDA", lookback_days=365)
     print(df[["close", "rsi", "macd", "macd_signal", "sma_50", "adx"]].tail(10))

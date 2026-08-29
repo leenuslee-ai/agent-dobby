@@ -73,14 +73,16 @@ def run_backtest(ticker: str, days: int, setup_name: str) -> dict:
     Returns:
         JSON with summary metrics, trade log, and the underlying candle data.
     """
-    definition = _store.get_definition(setup_name)
-    if definition is None:
+    record = _store.get(setup_name)
+    if record is None:
         available = [s["name"] for s in _store.list()]
         return {
             "error":     f"Setup '{setup_name}' not found in the database.",
             "available": available,
         }
 
+    definition = record["definition"]
+    definition.setdefault("name", record["name"])
     setup = setup_from_dict(definition)
     start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
@@ -157,7 +159,7 @@ def get_recommendation(ticker: str) -> dict:
     above_sma200 = bool(row["price_above_sma200"])
     adx          = row["adx"]
     bb_pct       = row["bb_pct"]
-    ema20_rising = bool(row["ema20_rising"])
+    ema20_rising = bool(row["ema20_rising"])  # window=20 pullback signal
 
     recommendation = "WAIT"
     reason = ""
