@@ -132,6 +132,7 @@ class Watchlist(Base):
     ticker    = Column(String(20), primary_key=True)
     industry  = Column(String(100))
     category  = Column(String(100))
+    setups    = Column(JSON, default=list)
     is_active = Column(Boolean, default=True)
     added_at  = Column(DateTime(timezone=True), default=_now)
 

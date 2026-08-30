@@ -17,6 +17,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
 
 from .chat_agent_tools import CHAT_AGENT_TOOLS
 from config import AGENT_MODEL, MODEL_PROVIDER
@@ -60,7 +61,7 @@ def _build_graph():
     # End after tools instead of looping back to agent — the raw tool output
     # is returned directly so the second LLM summarisation call is unnecessary.
     graph.add_edge("tools", END)
-    return graph.compile()
+    return graph.compile(checkpointer=MemorySaver())
 
 
 # ── Public class ──────────────────────────────────────────────────────────────

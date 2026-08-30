@@ -5,11 +5,6 @@ Endpoints
 POST   /login              — authenticate and receive a threadId
 POST   /whatnext           — send a message to the ChatAgent
 
-GET    /setups             — list all saved trading setups
-GET    /setups/{name_or_id}— get a single setup with its full definition
-POST   /setups             — create or update a setup
-DELETE /setups/{name_or_id}— delete a setup
-
 Run with:
     uvicorn chat_support.chat_api:app --reload --port 8800
 """
@@ -18,15 +13,13 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 
-from backtest import SetupStore
 from .chat_agent import ChatAgent
 
 app = FastAPI(title="AI Trading Pipeline API")
 _agent = ChatAgent()
-_store = SetupStore()
 
 # ── In-memory session store (threadId → username) ─────────────────────────────
 _sessions: dict[str, str] = {}
@@ -62,27 +55,8 @@ class WhatNextResponse(BaseModel):
     threadId: str
     response: dict
 
-class SetupRequest(BaseModel):
-    threadId:    str
-    name:        str
-    description: str = ""
-    definition:  dict
 
-class SetupResponse(BaseModel):
-    id:          str
-    name:        str
-    description: str
-    definition:  dict
-    created_at:  str
-
-class SetupSummary(BaseModel):
-    id:          str
-    name:        str
-    description: str
-    created_at:  str
-
-
-# ── Auth endpoints ────────────────────────────────────────────────────────────
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.post("/login", response_model=LoginResponse)
 def login(req: LoginRequest) -> LoginResponse:
@@ -104,42 +78,3 @@ def whatnext(req: WhatNextRequest) -> WhatNextResponse:
     print("whatnext Response")
     print(response)
     return WhatNextResponse(threadId=req.threadId, response=response)
-
-
-# ── Setup CRUD endpoints ──────────────────────────────────────────────────────
-
-@app.get("/setups", response_model=list[SetupSummary])
-def list_setups(threadId: str) -> list[SetupSummary]:
-    _require_session(threadId)
-    return [SetupSummary(**s) for s in _store.list()]
-
-
-@app.get("/setups/{name_or_id}", response_model=SetupResponse)
-def get_setup(name_or_id: str, threadId: str) -> SetupResponse:
-    _require_session(threadId)
-    record = _store.get(name_or_id)
-    if record is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Setup '{name_or_id}' not found.")
-    return SetupResponse(**record)
-
-
-@app.post("/setups", response_model=dict, status_code=status.HTTP_201_CREATED)
-def save_setup(req: SetupRequest) -> dict:
-    _require_session(req.threadId)
-    setup_id = _store.save(
-        name=req.name,
-        description=req.description,
-        definition=req.definition,
-    )
-    return {"id": setup_id, "name": req.name}
-
-
-@app.delete("/setups/{name_or_id}", response_model=dict)
-def delete_setup(name_or_id: str, threadId: str) -> dict:
-    _require_session(threadId)
-    deleted = _store.delete(name_or_id)
-    if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Setup '{name_or_id}' not found.")
-    return {"deleted": name_or_id}

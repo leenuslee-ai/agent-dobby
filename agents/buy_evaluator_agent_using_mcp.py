@@ -4,11 +4,11 @@ Evaluates whether a ticker meets the conditions defined in a trade setup
 and returns a structured BUY / WAIT decision with risk percentage.
 
 Usage:
-    python buy_evaluator_agent.py
-    python buy_evaluator_agent.py NVDA
+    python buy_evaluator_agent_using_mcp.py
+    python buy_evaluator_agent_using_mcp.py NVDA
 
 Or import and call:
-    from agents.buy_evaluator_agent import BuyEvaluatorAgent
+    from agents.buy_evaluator_agent_using_mcp import BuyEvaluatorAgent
     agent = BuyEvaluatorAgent()
     result = agent.evaluate(ticker="NVDA", trade_setup=MY_SETUP)
     # {"decision": "BUY", "risk_percent": 2}
