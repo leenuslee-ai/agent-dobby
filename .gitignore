@@ -220,3 +220,4 @@ __marimo__/
 # Project-specific cache and vector DB
 backtest_cache/
 chroma_db/
+*.csv
