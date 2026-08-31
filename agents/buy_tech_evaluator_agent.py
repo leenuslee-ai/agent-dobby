@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from backtest.backtest_data import get_ohlcv_with_indicators
+from tools.alphavantage.alphavantage_data import get_ohlcv_with_indicators
 from tools.trade_setup.condition_registry import build_condition
 from tools.trade_setup.setup_store import SetupStore
 from tools.trade_setup.setup_schema import setup_from_dict
