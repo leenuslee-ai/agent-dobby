@@ -12,7 +12,7 @@ Formula examples
 {"type": "formula", "params": {"expr": "close > ema_20 and adx > 25"}}
 {"type": "formula", "params": {"expr": "bb_pct < 0.1 and rsi < 35"}}
 
-Available column names in expressions: any column produced by backtest_data.py
+Available column names in expressions: any column produced by alphavantage_data.py
   close, open, high, low, volume,
   rsi, macd, macd_signal, macd_hist, macd_crossover_up, macd_crossover_down,
   sma_20, sma_50, sma_200, ema_12, ema_20, ema_26, adx,

@@ -25,7 +25,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
-from .backtest_data import get_ohlcv_with_indicators
+from tools.alphavantage.alphavantage_data import get_ohlcv_with_indicators
 from tools import Setup, setup_from_dict
 
 
