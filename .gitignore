@@ -219,5 +219,6 @@ __marimo__/
 
 # Project-specific cache and vector DB
 backtest_cache/
+tools/alphavantage/cache/
 chroma_db/
 *.csv

@@ -136,8 +136,6 @@ class Backtester:
                 for label, cond_fn in self.setup.entry_conditions:
                     try:
                         result = bool(cond_fn(row))
-                        print("Condition")
-                        print(row.to_string())
                     except Exception:
                         result = False
                     if result:
