@@ -75,7 +75,7 @@ class BuyTechEvaluatorAgent:
         except Exception as e:
             return f"Decision based on condition evaluation. (Reason generation failed: {e})"
 
-    def evaluate(self, ticker: str, setup_name: str) -> dict:
+    def evaluate(self, ticker: str, setup_name: str, generate_reason: bool = True) -> dict:
         """Evaluate the most recent bar for ticker against the named setup.
 
         Args:
@@ -135,15 +135,35 @@ class BuyTechEvaluatorAgent:
         print(f"\n  Decision: {decision}")
 
         # ── 4. Generate reason via Ollama ─────────────────────────────────────
-        reason = self._generate_reason(ticker, setup_name, conditions, decision)
+        reason = self._generate_reason(ticker, setup_name, conditions, decision) if generate_reason else ""
 
         return {
+            "ticker": ticker.upper(),
+            "setup_name": setup_name,
             "decision": decision,
             "risk_percent": risk_percent,
             "conditions": conditions,
             "reason": reason,
             "evaluated_at": bar_date,
         }
+
+
+    def evaluate_many(self, pairs: list[tuple[str, str]]) -> list[dict]:
+        """Evaluate multiple (ticker, setup_name) pairs and return a list of results.
+
+        Reason generation is disabled for batch evaluation to keep it fast.
+
+        Args:
+            pairs: List of (ticker, setup_name) tuples,
+                   e.g. [("NVDA", "RSI_MACD_TREND"), ("AAPL", "EMA20_PB")]
+
+        Returns:
+            List of result dicts, one per pair.
+        """
+        return [
+            self.evaluate(ticker, setup_name, generate_reason=False)
+            for ticker, setup_name in pairs
+        ]
 
 
 # ── CLI entry point ───────────────────────────────────────────────────────────
