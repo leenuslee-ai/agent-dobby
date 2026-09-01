@@ -13,14 +13,23 @@ from typing import Annotated, TypedDict
 
 import json
 
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 
 from .chat_agent_tools import CHAT_AGENT_TOOLS
-from config import AGENT_MODEL, MODEL_PROVIDER
+from config import AGENT_MODEL, MODEL_PROVIDER, CHAT_AGENT_TRACE
+
+
+_SYSTEM_PROMPT = """\
+You are a trading assistant with access to tools for market data, backtesting, \
+recommendations, portfolio management, trade setups, and a watchlist.
+
+Use tools only when the user is clearly asking for data or an action. \
+For greetings, farewells, acknowledgements, or casual conversation, \
+respond conversationally without calling any tool."""
 
 
 # ── LLM factory ──────────────────────────────────────────────────────────────
@@ -46,21 +55,35 @@ def _build_graph():
     tool_node = ToolNode(CHAT_AGENT_TOOLS)
 
     def call_model(state: AgentState) -> AgentState:
-        response = llm.invoke(state["messages"])
+        messages = state["messages"]
+        # Prepend system prompt if not already present
+        if not isinstance(messages[0], SystemMessage):
+            messages = [SystemMessage(content=_SYSTEM_PROMPT)] + messages
+        response = llm.invoke(messages)
         return {"messages": [response]}
 
     def should_continue(state: AgentState) -> str:
         last = state["messages"][-1]
         return "tools" if getattr(last, "tool_calls", None) else END
 
+    def after_tools(state: AgentState) -> str:
+        """Return END directly if the tool marked its output as already formatted."""
+        last = state["messages"][-1]
+        if isinstance(last, ToolMessage):
+            try:
+                data = json.loads(last.content)
+                if data.get("already_formatted"):
+                    return END
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return "agent"
+
     graph = StateGraph(AgentState)
     graph.add_node("agent", call_model)
     graph.add_node("tools", tool_node)
     graph.set_entry_point("agent")
     graph.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
-    # End after tools instead of looping back to agent — the raw tool output
-    # is returned directly so the second LLM summarisation call is unnecessary.
-    graph.add_edge("tools", END)
+    graph.add_conditional_edges("tools", after_tools, {"agent": "agent", END: END})
     return graph.compile(checkpointer=MemorySaver())
 
 
@@ -73,30 +96,64 @@ class ChatAgent:
     def invoke(self, thread_id: str, message: str) -> dict | str:
         """Run the agent and return the result.
 
-        If a tool was called, returns the raw tool output as a dict so the
-        caller gets clean JSON without LLM prose wrapped around it.
-        Falls back to the LLM's text reply when no tool was invoked.
+        Returns the LLM's final response. When CHAT_AGENT_TRACE is enabled,
+        the result dict will include a "trace" key with each step the agent took.
         """
         print(f"[ChatAgent] thread_id={thread_id!r}  message={message!r}")
+        config = {"configurable": {"thread_id": thread_id}}
+
+        # Snapshot message count before invoking so we can slice only new messages
+        prior_state = self._graph.get_state(config)
+        prior_count = len(prior_state.values.get("messages", [])) if prior_state.values else 0
+
         result = self._graph.invoke(
             {"messages": [HumanMessage(content=message)]},
-            config={"configurable": {"thread_id": thread_id}},
+            config=config,
         )
 
-        # Find the last ToolMessage (most recent tool output)
-        tool_outputs = [
-            m for m in result["messages"] if isinstance(m, ToolMessage)
-        ]
-        if tool_outputs:
-            raw = tool_outputs[-1].content
-            # ToolMessage content is a JSON string — parse it to a dict
-            try:
-                return json.loads(raw)
-            except (json.JSONDecodeError, TypeError):
-                return raw
+        last = result["messages"][-1]
+        try:
+            response = json.loads(last.content)
+        except (json.JSONDecodeError, TypeError):
+            response = {"message": last.content}
+        response.pop("already_formatted", None)
 
-        # No tool was called — return the LLM's plain text reply
-        return result["messages"][-1].content
+        if CHAT_AGENT_TRACE:
+            new_messages = result["messages"][prior_count:]
+            response["trace"] = _build_trace(new_messages)
+
+        return response
+
+
+def _build_trace(messages: list[BaseMessage]) -> list[dict]:
+    """Extract a human-readable step-by-step trace from the message list."""
+    trace = []
+    for msg in messages:
+        if isinstance(msg, SystemMessage):
+            continue
+        if isinstance(msg, HumanMessage):
+            trace.append({"step": "user", "content": msg.content})
+        elif isinstance(msg, AIMessage):
+            if msg.tool_calls:
+                for tc in msg.tool_calls:
+                    trace.append({
+                        "step": "tool_call",
+                        "tool": tc["name"],
+                        "args": tc["args"],
+                    })
+            elif msg.content:
+                trace.append({"step": "assistant", "content": msg.content})
+        elif isinstance(msg, ToolMessage):
+            try:
+                content = json.loads(msg.content)
+            except (json.JSONDecodeError, TypeError):
+                content = msg.content
+            trace.append({
+                "step": "tool_result",
+                "tool": msg.name,
+                "content": content,
+            })
+    return trace
 
 
 # ── Quick test ────────────────────────────────────────────────────────────────

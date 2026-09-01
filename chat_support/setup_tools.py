@@ -120,6 +120,35 @@ def save_trade_setup(setup_text: str) -> dict:
 
 
 @tool
+def list_trade_setups() -> dict:
+    """List all trading setups saved in the setup store.
+
+    Use this tool when the user wants to see all available setups.
+    Examples:
+      - "Show me all setups"
+      - "List my trading setups"
+      - "What setups do I have?"
+
+    Returns:
+        JSON with a list of setup summaries (id, name, description, created_at).
+    """
+    setups = _store.list()
+    return {
+        "responseType": "TradeSetupList",
+        "count": len(setups),
+        "setups": [
+            {
+                "id":          s["id"],
+                "name":        s["name"],
+                "description": s["description"],
+                "created_at":  s["created_at"],
+            }
+            for s in setups
+        ],
+    }
+
+
+@tool
 def get_trade_setup(name: str) -> dict:
     """Retrieve an existing trading setup by name from the setup store.
 
@@ -155,4 +184,4 @@ def get_trade_setup(name: str) -> dict:
     }
 
 
-SETUP_TOOLS = [save_trade_setup, get_trade_setup]
+SETUP_TOOLS = [save_trade_setup, list_trade_setups, get_trade_setup]

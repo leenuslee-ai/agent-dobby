@@ -21,7 +21,7 @@ class Config(Base):
     value = Column(Text, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_now, onupdate=_now)
 
-
+# Not used for now
 class TradeSetup(Base):
     __tablename__ = "trade_setups"
 
@@ -42,6 +42,7 @@ class BacktestRun(Base):
 
     id           = Column(String(36), primary_key=True)
     setup_id     = Column(String(36), ForeignKey("trade_setups.id"), nullable=False)
+    ticker       = Column(String(20), nullable=False)
     start_date   = Column(DateTime(timezone=True), nullable=False)
     end_date     = Column(DateTime(timezone=True), nullable=False)
     initial_cash = Column(Float, nullable=False)

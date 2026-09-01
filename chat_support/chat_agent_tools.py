@@ -15,8 +15,8 @@ from langchain_core.tools import tool
 
 from backtest import Backtester, SetupStore, get_ohlcv_with_indicators, setup_from_dict
 from .portfolio_tools import create_portfolio_account, list_portfolio_accounts
-from .setup_tools import save_trade_setup, get_trade_setup
-from .watchlist_tools import add_watchlist_entry, update_watchlist_entry
+from .setup_tools import save_trade_setup, list_trade_setups, get_trade_setup
+from .watchlist_tools import add_watchlist_entry, update_watchlist_entry, list_watchlist
 
 _store = SetupStore()
 
@@ -125,6 +125,7 @@ def run_backtest(ticker: str, days: int, setup_name: str) -> dict:
         "summary":      metrics,
         "trades":       trades,
         "candle_data":  candle_bars,
+        "already_formatted": True
     }
 
 
@@ -230,4 +231,4 @@ def get_recommendation(ticker: str) -> dict:
 
 # ── Exports ───────────────────────────────────────────────────────────────────
 
-CHAT_AGENT_TOOLS = [get_candlebar_data, run_backtest, get_recommendation, create_portfolio_account, list_portfolio_accounts, save_trade_setup, get_trade_setup, add_watchlist_entry, update_watchlist_entry]
+CHAT_AGENT_TOOLS = [get_candlebar_data, run_backtest, get_recommendation, create_portfolio_account, list_portfolio_accounts, save_trade_setup, list_trade_setups, get_trade_setup, add_watchlist_entry, update_watchlist_entry, list_watchlist]

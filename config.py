@@ -55,6 +55,10 @@ MODELS = {
 SUMMARIZE_MODEL = MODELS[MODEL_PROVIDER]["summarize"]
 AGENT_MODEL     = MODELS[MODEL_PROVIDER]["agent"]
 
+# ── Chat agent tracing ───────────────────────────────────────────────────────
+# Set CHAT_AGENT_TRACE=true in .env to include an execution trace in /whatnext
+CHAT_AGENT_TRACE = os.getenv("CHAT_AGENT_TRACE", "false").lower() == "true"
+
 # ── Alpha Vantage ────────────────────────────────────────────────────────────
 ALPHAVANTAGE_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY", "")
 

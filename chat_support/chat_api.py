@@ -12,6 +12,7 @@ Run with:
 from __future__ import annotations
 
 import uuid
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
@@ -54,6 +55,7 @@ class WhatNextRequest(BaseModel):
 class WhatNextResponse(BaseModel):
     threadId: str
     response: dict
+    trace: Optional[list] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -75,6 +77,7 @@ def whatnext(req: WhatNextRequest) -> WhatNextResponse:
     _require_session(req.threadId)
     result = _agent.invoke(thread_id=req.threadId, message=req.message)
     response = result if isinstance(result, dict) else {"message": result}
+    trace = response.pop("trace", None)
     print("whatnext Response")
     print(response)
-    return WhatNextResponse(threadId=req.threadId, response=response)
+    return WhatNextResponse(threadId=req.threadId, response=response, trace=trace)

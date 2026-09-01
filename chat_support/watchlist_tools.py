@@ -124,4 +124,48 @@ def update_watchlist_entry(
         return {"responseType": "WatchlistEntry", "status": "error", "error": str(e)}
 
 
-WATCHLIST_TOOLS = [add_watchlist_entry, update_watchlist_entry]
+@tool
+def list_watchlist(active_only: bool = False) -> dict:
+    """List all tickers in the watchlist.
+
+    Use this tool when the user wants to see their watchlist.
+    Examples:
+      - "Show me my watchlist"
+      - "List all watched stocks"
+      - "What stocks am I tracking?"
+      - "Show only active watchlist entries"
+
+    Args:
+        active_only: If True, return only active entries (default False — return all).
+
+    Returns:
+        JSON with a list of watchlist entries.
+    """
+    try:
+        with get_session() as session:
+            from sqlalchemy import select
+            stmt = select(Watchlist)
+            if active_only:
+                stmt = stmt.where(Watchlist.is_active == True)
+            entries = session.execute(stmt).scalars().all()
+            result = [
+                {
+                    "ticker":    e.ticker,
+                    "industry":  e.industry,
+                    "category":  e.category,
+                    "setups":    e.setups or [],
+                    "is_active": e.is_active,
+                    "added_at":  str(e.added_at),
+                }
+                for e in entries
+            ]
+        return {
+            "responseType": "WatchlistEntries",
+            "count": len(result),
+            "entries": result,
+        }
+    except Exception as e:
+        return {"responseType": "WatchlistEntries", "status": "error", "error": str(e)}
+
+
+WATCHLIST_TOOLS = [add_watchlist_entry, update_watchlist_entry, list_watchlist]
