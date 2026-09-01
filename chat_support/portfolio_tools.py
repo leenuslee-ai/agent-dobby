@@ -66,15 +66,16 @@ def create_portfolio_account(
             session.add(account)
             session.flush()
             result = {
-                "responseType": "PortfolioAccount",
-                "status": "created",
-                "id": account.id,
-                "broker": account.broker,
-                "account_id": account.account_id,
-                "display_name": account.display_name,
-                "is_paper": account.is_paper,
-                "cash": account.cash,
-                "equity": account.equity,
+                "responseType":    "PortfolioAccount",
+                "status":          "created",
+                "id":              account.id,
+                "broker":          account.broker,
+                "account_id":      account.account_id,
+                "display_name":    account.display_name,
+                "is_paper":        account.is_paper,
+                "cash":            account.cash,
+                "equity":          account.equity,
+                "already_formatted": True,
             }
 
         return result
@@ -111,7 +112,7 @@ def list_portfolio_accounts() -> dict:
                 }
                 for a in accounts
             ]
-        return {"responseType": "PortfolioAccountList", "accounts": result, "total": len(result)}
+        return {"responseType": "PortfolioAccountList", "accounts": result, "total": len(result), "already_formatted": True}
     except Exception as e:
         return {"responseType": "PortfolioAccountList", "status": "error", "error": str(e)}
 

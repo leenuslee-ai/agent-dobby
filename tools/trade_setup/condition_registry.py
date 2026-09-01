@@ -13,9 +13,10 @@ Formula examples
 {"type": "formula", "params": {"expr": "bb_pct < 0.1 and rsi < 35"}}
 
 Available column names in expressions: any column produced by alphavantage_data.py
-  close, open, high, low, volume,
+  close, open, high, low, volume, vol_sma_20,
   rsi, macd, macd_signal, macd_hist, macd_crossover_up, macd_crossover_down,
-  sma_20, sma_50, sma_200, ema_12, ema_20, ema_26, adx,
+  sma_20, sma_50, sma_200, ema_8, ema_12, ema_20, ema_21, ema_26, adx,
+  ema_8_cross_above_21, ema_8_cross_below_21, ema_8_cross_above_20, ema_12_cross_above_26,
   bb_upper, bb_lower, bb_middle, bb_pct, atr, obv,
   stoch_k, stoch_d, price_above_sma50, price_above_sma200,
   golden_cross, death_cross,
@@ -92,6 +93,8 @@ REGISTRY: dict[str, ConditionFactory] = {
     # ── RSI ──────────────────────────────────────────────────────────────────
     "rsi_below":            lambda p: (lambda r: r["rsi"] < p["value"]),
     "rsi_above":            lambda p: (lambda r: r["rsi"] > p["value"]),
+    "rsi_2_below":          lambda p: (lambda r: r["rsi_2"] < p["value"]),
+    "rsi_2_above":          lambda p: (lambda r: r["rsi_2"] > p["value"]),
 
     # ── MACD ─────────────────────────────────────────────────────────────────
     "macd_crossover_up":    lambda p: (lambda r: bool(r["macd_crossover_up"])),
@@ -115,6 +118,11 @@ REGISTRY: dict[str, ConditionFactory] = {
     "touched_ema":          lambda p: (lambda r: bool(r[f"touched_ema{p.get('window', 20)}"])),
     "closed_above_ema":     lambda p: (lambda r: bool(r[f"closed_above_ema{p.get('window', 20)}"])),
 
+    # ── EMA crossover signals ─────────────────────────────────────────────────
+    # params: {"fast": 8, "slow": 21}
+    "ema_cross_above":      lambda p: (lambda r: bool(r[f"ema_{p['fast']}_cross_above_{p['slow']}"])),
+    "ema_cross_below":      lambda p: (lambda r: bool(r[f"ema_{p['fast']}_cross_below_{p['slow']}"])),
+
     # ── Candlestick patterns ─────────────────────────────────────────────────
     "hammer":               lambda p: (lambda r: bool(r["hammer"])),
     "bullish_engulfing":    lambda p: (lambda r: bool(r["bullish_engulfing"])),
@@ -136,6 +144,10 @@ REGISTRY: dict[str, ConditionFactory] = {
     # params: {"value": 20}
     "stoch_oversold":       lambda p: (lambda r: r["stoch_k"] < p.get("value", 20) and r["stoch_d"] < p.get("value", 20)),
     "stoch_overbought":     lambda p: (lambda r: r["stoch_k"] > p.get("value", 80) and r["stoch_d"] > p.get("value", 80)),
+
+    # ── Volume ───────────────────────────────────────────────────────────────
+    # params: {"multiplier": 1.2}  — volume > multiplier × 20-day volume SMA
+    "volume_above_avg":     lambda p: (lambda r: r["volume"] > r["vol_sma_20"] * p.get("multiplier", 1.0)),
 }
 
 

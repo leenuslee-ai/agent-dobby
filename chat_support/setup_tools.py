@@ -18,20 +18,39 @@ AVAILABLE CONDITION TYPES (use ONLY these):
 {registry_types}
 
 CONDITION TYPE DETAILS:
-- rsi_below / rsi_above:         params: {{"value": <number>}}
-- macd_crossover_up/down:        params: {{}}
-- macd_hist_positive/negative:   params: {{}}
+- rsi_below / rsi_above:             params: {{"value": <number>}}  ← uses RSI(14)
+- rsi_2_below / rsi_2_above:        params: {{"value": <number>}}  ← uses RSI(2) ultra-fast
+- macd_crossover_up/down:            params: {{}}
+- macd_hist_positive/negative:       params: {{}}
 - price_above_sma / price_below_sma: params: {{"period": <number>}}
-- price_above_ema / price_below_ema: params: {{"period": <number>}}
-- golden_cross / death_cross:    params: {{}}
-- ema_rising / touched_ema / closed_above_ema: params: {{"window": <number>}}
+- price_above_ema / price_below_ema: params: {{"period": <number>}}  ← use for "price above/below EMA-N on close"
+- golden_cross / death_cross:        params: {{}}
+- ema_rising:                        params: {{"window": <number>}}  ← EMA slope is rising
+- touched_ema:                       params: {{"window": <number>}}  ← low touched the EMA (pullback signal)
+- closed_above_ema:                  params: {{"window": <number>}}  ← candle closed above EMA (pullback recovery)
+- ema_cross_above / ema_cross_below: params: {{"fast": <number>, "slow": <number>}}  ← fast EMA crosses slow EMA
 - hammer / bullish_engulfing / hammer_or_engulf: params: {{}}
-- adx_above / adx_below:         params: {{"value": <number>}}
-- bb_pct_below / bb_pct_above:   params: {{"value": <number>}}
+- adx_above / adx_below:             params: {{"value": <number>}}
+- bb_pct_below / bb_pct_above:       params: {{"value": <number>}}
 - price_below_bb_lower / price_above_bb_upper: params: {{}}
-- stoch_k_below / stoch_k_above: params: {{"value": <number>}}
+- stoch_k_below / stoch_k_above:     params: {{"value": <number>}}
 - stoch_oversold / stoch_overbought: params: {{"value": <number>}}
-- formula:                        params: {{"expr": "<expression using column names>"}}
+- volume_above_avg:                  params: {{"multiplier": <number>}}  e.g. 1.2 for volume > 1.2x 20-day avg
+- formula:                           params: {{"expr": "<expression using column names>"}}
+  Available columns: close, open, high, low, volume, vol_sma_20, rsi, rsi_2, macd, macd_signal,
+  sma_20, sma_50, sma_200, ema_8, ema_12, ema_20, ema_21, ema_26, adx, bb_pct, atr, stoch_k, stoch_d
+
+IMPORTANT RULES:
+1. Map every stated condition to a registry type — do not drop any.
+   "positive close" or "candle closes up" → formula {{"expr": "close > open"}}
+2. "price below EMA-N" as an exit → use price_below_ema {{"period": N}}, NOT closed_above_ema.
+   closed_above_ema is a pullback recovery signal, not a price-vs-EMA comparison.
+3. stop_loss_pct and take_profit_pct must be plain decimals (0.05 = 5%). Never store a ratio.
+   If a Risk-to-Reward ratio is given (e.g. 2.5:1) and no explicit stop is stated, default
+   stop_loss_pct to 0.04 (4%) and compute take_profit_pct = ratio × stop_loss_pct.
+   If an ATR-based stop is given (e.g. "2.0 × ATR"), approximate: default stop_loss_pct to 0.06 (6%)
+   since 2×ATR for large-cap stocks is typically 5-8% of price.
+4. position_value is the fraction of equity risked per trade (e.g. 0.02 for 2%).
 
 OUTPUT: Respond with ONLY a valid JSON object in this exact format:
 {{
@@ -107,12 +126,13 @@ def save_trade_setup(setup_text: str) -> dict:
 
         setup_id = _store.save(name=name, description=description, definition=definition)
         return {
-            "responseType": "SaveSetup",
-            "status": "saved",
-            "id": setup_id,
-            "name": name,
-            "description": description,
-            "definition": definition,
+            "responseType":    "SaveSetup",
+            "status":          "saved",
+            "id":              setup_id,
+            "name":            name,
+            "description":     description,
+            "definition":      definition,
+            "already_formatted": True,
         }
 
     except Exception as e:
@@ -134,8 +154,8 @@ def list_trade_setups() -> dict:
     """
     setups = _store.list()
     return {
-        "responseType": "TradeSetupList",
-        "count": len(setups),
+        "responseType":    "TradeSetupList",
+        "count":           len(setups),
         "setups": [
             {
                 "id":          s["id"],
@@ -145,6 +165,7 @@ def list_trade_setups() -> dict:
             }
             for s in setups
         ],
+        "already_formatted": True,
     }
 
 
@@ -174,13 +195,14 @@ def get_trade_setup(name: str) -> dict:
             "available": available,
         }
     return {
-        "responseType": "TradeSetup",
-        "status": "found",
-        "id":          record["id"],
-        "name":        record["name"],
-        "description": record["description"],
-        "definition":  record["definition"],
-        "created_at":  record["created_at"],
+        "responseType":    "TradeSetup",
+        "status":          "found",
+        "id":              record["id"],
+        "name":            record["name"],
+        "description":     record["description"],
+        "definition":      record["definition"],
+        "created_at":      record["created_at"],
+        "already_formatted": True,
     }
 
 

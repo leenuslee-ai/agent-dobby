@@ -86,13 +86,16 @@ def _add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["sma_20"]  = ta.trend.sma_indicator(close, window=20)
     df["sma_50"]  = ta.trend.sma_indicator(close, window=50)
     df["sma_200"] = ta.trend.sma_indicator(close, window=200)
+    df["ema_8"]   = ta.trend.ema_indicator(close, window=8)
     df["ema_12"]  = ta.trend.ema_indicator(close, window=12)
     df["ema_20"]  = ta.trend.ema_indicator(close, window=20)
+    df["ema_21"]  = ta.trend.ema_indicator(close, window=21)
     df["ema_26"]  = ta.trend.ema_indicator(close, window=26)
     df["adx"]     = ta.trend.adx(high, low, close, window=14)
 
     # Momentum
     df["rsi"]          = ta.momentum.rsi(close, window=14)
+    df["rsi_2"]        = ta.momentum.rsi(close, window=2)
     macd_obj           = ta.trend.MACD(close)
     df["macd"]         = macd_obj.macd()
     df["macd_signal"]  = macd_obj.macd_signal()
@@ -110,7 +113,8 @@ def _add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["atr"]          = ta.volatility.average_true_range(high, low, close)
 
     # Volume
-    df["obv"] = ta.volume.on_balance_volume(close, vol)
+    df["obv"]        = ta.volume.on_balance_volume(close, vol)
+    df["vol_sma_20"] = ta.trend.sma_indicator(vol, window=20)
 
     # Derived signals (True/False columns for easy setup evaluation)
     df["macd_crossover_up"]   = (df["macd"] > df["macd_signal"]) & (df["macd"].shift(1) <= df["macd_signal"].shift(1))
@@ -120,8 +124,15 @@ def _add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["golden_cross"]        = (df["sma_50"] > df["sma_200"]) & (df["sma_50"].shift(1) <= df["sma_200"].shift(1))
     df["death_cross"]         = (df["sma_50"] < df["sma_200"]) & (df["sma_50"].shift(1) >= df["sma_200"].shift(1))
 
+    # ── EMA crossover signals (generated for all meaningful fast/slow pairs) ──
+    _ema_pairs = [(8, 21), (8, 20), (12, 26)]
+    for fast, slow in _ema_pairs:
+        f, s = df[f"ema_{fast}"], df[f"ema_{slow}"]
+        df[f"ema_{fast}_cross_above_{slow}"] = (f > s) & (f.shift(1) <= s.shift(1))
+        df[f"ema_{fast}_cross_below_{slow}"] = (f < s) & (f.shift(1) >= s.shift(1))
+
     # ── EMA pullback signals (generated for every EMA window computed above) ────
-    for window in [12, 20, 26]:
+    for window in [8, 12, 20, 21, 26]:
         ema_col = f"ema_{window}"
         df[f"ema{window}_rising"]       = df[ema_col] > df[ema_col].shift(5)
         df[f"touched_ema{window}"]      = low <= df[ema_col]

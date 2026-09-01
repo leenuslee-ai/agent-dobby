@@ -47,11 +47,12 @@ def get_candlebar_data(ticker: str, days: int, time_interval: str) -> dict:
         for idx, row in df.iterrows()
     ]
     return {
-        "responseType":  "CandlebarData",
-        "ticker":        ticker.upper(),
-        "time_interval": time_interval,
-        "days":          days,
-        "bars":          bars,
+        "responseType":    "CandlebarData",
+        "ticker":          ticker.upper(),
+        "time_interval":   time_interval,
+        "days":            days,
+        "bars":            bars,
+        "already_formatted": True,
     }
 
 
@@ -136,10 +137,11 @@ def get_recommendation(ticker: str) -> dict:
         )
 
     return {
-        "responseType":   "Recommendation",
-        "ticker":         ticker.upper(),
-        "recommendation": recommendation,
-        "reason":         reason,
+        "responseType":    "Recommendation",
+        "ticker":          ticker.upper(),
+        "recommendation":  recommendation,
+        "reason":          reason,
+        "already_formatted": True,
         "indicators": {
             "rsi":           round(rsi, 1),
             "adx":           round(adx, 1),

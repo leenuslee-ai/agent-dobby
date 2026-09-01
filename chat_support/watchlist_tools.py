@@ -52,13 +52,14 @@ def add_watchlist_entry(
             )
             session.add(entry)
             result = {
-                "responseType": "WatchlistEntry",
-                "status": "added",
-                "ticker": entry.ticker,
-                "industry": entry.industry,
-                "category": entry.category,
-                "setups": entry.setups,
-                "is_active": entry.is_active,
+                "responseType":    "WatchlistEntry",
+                "status":          "added",
+                "ticker":          entry.ticker,
+                "industry":        entry.industry,
+                "category":        entry.category,
+                "setups":          entry.setups,
+                "is_active":       entry.is_active,
+                "already_formatted": True,
             }
         return result
     except Exception as e:
@@ -111,13 +112,14 @@ def update_watchlist_entry(
             if is_active is not None:
                 entry.is_active = is_active
             result = {
-                "responseType": "WatchlistEntry",
-                "status": "updated",
-                "ticker": entry.ticker,
-                "industry": entry.industry,
-                "category": entry.category,
-                "setups": entry.setups or [],
-                "is_active": entry.is_active,
+                "responseType":    "WatchlistEntry",
+                "status":          "updated",
+                "ticker":          entry.ticker,
+                "industry":        entry.industry,
+                "category":        entry.category,
+                "setups":          entry.setups or [],
+                "is_active":       entry.is_active,
+                "already_formatted": True,
             }
         return result
     except Exception as e:
@@ -160,9 +162,10 @@ def list_watchlist(active_only: bool = False) -> dict:
                 for e in entries
             ]
         return {
-            "responseType": "WatchlistEntries",
-            "count": len(result),
-            "entries": result,
+            "responseType":    "WatchlistEntries",
+            "count":           len(result),
+            "entries":         result,
+            "already_formatted": True,
         }
     except Exception as e:
         return {"responseType": "WatchlistEntries", "status": "error", "error": str(e)}
