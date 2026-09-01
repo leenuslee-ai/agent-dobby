@@ -27,6 +27,7 @@ import pandas as pd
 
 from tools.alphavantage.alphavantage_data import get_ohlcv_with_indicators
 from tools import Setup, setup_from_dict
+from db.backtest_run_data import save_backtest_run
 
 
 # ── Trade record ──────────────────────────────────────────────────────────────
@@ -66,13 +67,16 @@ class Backtester:
         end_date: str | None = None,
         initial_equity: float = 100_000.0,
         lookback_days: int = 730,
+        setup_id: str | None = None,
     ):
         self.ticker = ticker.upper()
         self.setup = setup
+        self.setup_id = setup_id
         self.initial_equity = initial_equity
         self.equity = initial_equity
         self.trades: list[Trade] = []
         self.equity_curve: list[float] = []
+        self.run_id: str | None = None
 
         df = get_ohlcv_with_indicators(self.ticker, lookback_days=lookback_days)
 
@@ -170,7 +174,24 @@ class Backtester:
             self.equity += position.pnl
             self.trades.append(position)
 
-        return self._metrics()
+        metrics = self._metrics()
+
+        if "error" not in metrics and self.setup_id:
+            try:
+                self.run_id = save_backtest_run(
+                    setup_id=self.setup_id,
+                    ticker=self.ticker,
+                    metrics=metrics,
+                    trades=self.trades,
+                    start_date=self.df.index[0].to_pydatetime(),
+                    end_date=self.df.index[-1].to_pydatetime(),
+                    initial_cash=self.initial_equity,
+                )
+                metrics["run_id"] = self.run_id
+            except Exception as e:
+                metrics["persist_warning"] = f"Run not saved: {e}"
+
+        return metrics
 
     def _metrics(self) -> dict:
         if not self.trades:
@@ -239,69 +260,11 @@ class Backtester:
         print(f"{'='*65}\n")
 
 
-# ── Example setup (mirrors the portfolio_manager_agent.py default setup) ──────
-
-def build_example_setup() -> Setup:
-    return Setup(
-        name="RSI Oversold + MACD Crossover + Trend Filter",
-        entry_conditions=[
-            ("RSI(14) < 35 (oversold)",          lambda r: r["rsi"] < 35),
-            ("MACD crossover up",                 lambda r: bool(r["macd_crossover_up"])),
-            ("Price above SMA(50)",               lambda r: r["price_above_sma50"]),
-            ("ADX(14) > 20 (trending market)",    lambda r: r["adx"] > 20),
-        ],
-        exit_conditions=[
-            ("RSI(14) > 70 (overbought)",         lambda r: r["rsi"] > 70),
-            ("MACD crossover down",               lambda r: bool(r["macd_crossover_down"])),
-        ],
-        stop_loss_pct=0.05,        # 5% stop loss
-        take_profit_pct=0.15,      # 15% take profit
-        position_type="equity_pct",
-        position_value=0.10,       # risk 10% of equity per trade
-    )
-
-
-# ── 20 EMA Pullback setup ─────────────────────────────────────────────────────
-
-def build_ema_pullback_setup() -> Setup:
-    """20 EMA Pullback swing trade setup.
-
-    Entry logic:
-      1. EMA-20 is rising (uptrend confirmed)
-      2. Price pulled back and touched or pierced the EMA-20 on the low
-      3. Candle closed back above EMA-20 (recovery)
-      4. Reversal candle: hammer OR bullish engulfing right at the line
-
-    Stop loss: 3% below entry (approximates "just under the EMA / swing low")
-    Target:    8% above entry (approximates "previous recent high")
-
-    Tune stop_loss_pct and take_profit_pct to match the average swing size
-    of the stocks you trade.
-    """
-    return Setup(
-        name="20 EMA Pullback",
-        entry_conditions=[
-            ("EMA-20 is rising",               lambda r: bool(r["ema20_rising"])),
-            ("Price above SMA-50 (uptrend)",   lambda r: bool(r["price_above_sma50"])),
-            ("Low touched EMA-20 (pullback)",  lambda r: bool(r["touched_ema20"])),
-            ("Closed back above EMA-20",       lambda r: bool(r["closed_above_ema20"])),
-            ("Reversal candle (hammer or engulf)",
-             lambda r: bool(r["hammer"]) or bool(r["bullish_engulfing"])),
-        ],
-        exit_conditions=[
-            ("RSI overbought > 70",            lambda r: r["rsi"] > 70),
-            ("Price crosses back below EMA-20",lambda r: r["close"] < r["ema_20"]),
-        ],
-        stop_loss_pct=0.03,        # 3% — just under the EMA / swing low
-        take_profit_pct=0.08,      # 8% — approximate previous high
-        position_type="equity_pct",
-        position_value=0.10,
-    )
-
-
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    from .example_setups import build_example_setup
+
     ticker     = sys.argv[1] if len(sys.argv) > 1 else "NVDA"
     start_date = sys.argv[2] if len(sys.argv) > 2 else "2023-01-01"
 

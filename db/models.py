@@ -34,14 +34,13 @@ class TradeSetup(Base):
     created_at  = Column(DateTime(timezone=True), default=_now)
     updated_at  = Column(DateTime(timezone=True), default=_now, onupdate=_now)
 
-    backtest_runs = relationship("BacktestRun", back_populates="setup")
 
 
 class BacktestRun(Base):
     __tablename__ = "backtest_runs"
 
     id           = Column(String(36), primary_key=True)
-    setup_id     = Column(String(36), ForeignKey("trade_setups.id"), nullable=False)
+    setup_id     = Column(String(36), nullable=False)
     ticker       = Column(String(20), nullable=False)
     start_date   = Column(DateTime(timezone=True), nullable=False)
     end_date     = Column(DateTime(timezone=True), nullable=False)
@@ -54,7 +53,6 @@ class BacktestRun(Base):
     extra_stats  = Column(JSON)
     created_at   = Column(DateTime(timezone=True), default=_now)
 
-    setup        = relationship("TradeSetup", back_populates="backtest_runs")
     transactions = relationship("BacktestTransaction", back_populates="run")
 
 

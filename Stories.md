@@ -23,6 +23,13 @@
 
 2. View / Show setup RSI_MACD_TREND
 3. Run a backtest for AAPL over the last 300 days using the 'RSI14_Below30' setup and show me the results.
+4. Run a back test on NVDA using RSI_MACD_TREND setup 100 days -- not working -- 
+5. list the backtest runs
+6. show the back test result id = 
+7. add stock to watch list
+8. add setup to watch list for stock
+9.  
+
 
 
 - "Should I buy NVDA?"
@@ -30,3 +37,4 @@
 - "Is TSLA a good trade right now?"
 - "Give me a recommendation on MSFT"
 - "What's your call on AMD?"
+

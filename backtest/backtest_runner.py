@@ -16,7 +16,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from .backtester import Backtester, Setup, build_example_setup, build_ema_pullback_setup
+from .backtester import Backtester, Setup
+from .example_setups import build_example_setup, build_ema_pullback_setup
 from config import get_tickers
 
 

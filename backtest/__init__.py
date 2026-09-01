@@ -1,4 +1,5 @@
-from .backtester import Backtester, build_example_setup, build_ema_pullback_setup
+from .backtester import Backtester
+from .example_setups import build_example_setup, build_ema_pullback_setup
 from tools.alphavantage.alphavantage_data import get_ohlcv_with_indicators
 
 # Re-export tools symbols so existing callers using `from backtest import ...` still work
