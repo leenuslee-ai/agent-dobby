@@ -8,6 +8,79 @@ from db.session import get_session
 from db.models import PortfolioHolding, PortfolioTransaction, CloseTradeReference
 
 
+def _holding_to_dict(h: PortfolioHolding) -> dict:
+    return {
+        "id":                       h.id,
+        "account_id":               h.account_id,
+        "ticker":                   h.ticker,
+        "opening_transaction_date": h.opening_transaction_date.isoformat() if h.opening_transaction_date else None,
+        "open_qty":                 h.open_qty,
+        "opening_transaction_type": h.opening_transaction_type,
+        "open_price":               h.open_price,
+        "pending_qty":              h.pending_qty,
+        "current_price":            h.current_price,
+        "current_open_value":       h.current_open_value,
+        "closed_value":             h.closed_value,
+    }
+
+
+def get_open_holdings(
+    account_id: str,
+    opening_transaction_type: str = "BUY",
+) -> list[dict]:
+    """Return holdings with pending_qty > 0 for an account.
+
+    Args:
+        account_id:               PortfolioAccount.id
+        opening_transaction_type: Filter by opening side — "BUY" or "SELL" (default "BUY")
+
+    Returns:
+        List of holding dicts ordered by opening_transaction_date ascending.
+    """
+    with get_session() as session:
+        q = (
+            session.query(PortfolioHolding)
+            .filter(
+                PortfolioHolding.account_id == account_id,
+                PortfolioHolding.pending_qty > 0,
+                PortfolioHolding.opening_transaction_type == opening_transaction_type.upper(),
+            )
+            .order_by(PortfolioHolding.opening_transaction_date)
+        )
+        return [_holding_to_dict(h) for h in q.all()]
+
+
+def get_holdings(
+    account_id: str,
+    opening_transaction_type: str | None = None,
+    opening_transaction_date: datetime | None = None,
+) -> list[dict]:
+    """Return holdings for an account with optional filters.
+
+    Args:
+        account_id:               PortfolioAccount.id
+        opening_transaction_type: "BUY", "SELL", or None for all
+        opening_transaction_date: If provided, return only holdings on or after this date
+
+    Returns:
+        List of holding dicts ordered by opening_transaction_date ascending.
+    """
+    with get_session() as session:
+        q = session.query(PortfolioHolding).filter(
+            PortfolioHolding.account_id == account_id,
+        )
+        if opening_transaction_type is not None:
+            q = q.filter(
+                PortfolioHolding.opening_transaction_type == opening_transaction_type.upper()
+            )
+        if opening_transaction_date is not None:
+            q = q.filter(
+                PortfolioHolding.opening_transaction_date >= opening_transaction_date
+            )
+        q = q.order_by(PortfolioHolding.opening_transaction_date)
+        return [_holding_to_dict(h) for h in q.all()]
+
+
 def save_trade(
     account_id: str,
     ticker: str,

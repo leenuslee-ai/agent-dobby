@@ -9,10 +9,10 @@ A LangGraph agent that manages your portfolio by:
   - Logging every reasoning step so you can audit and refine your setups
 
 Usage:
-    python portfolio_manager_agent.py
+    python portfolio_manager_test_agent.py
 
 Or import and call:
-    from .portfolio_manager_agent import run
+    from .portfolio_manager_test_agent import run
     result = run("NVDA is showing RSI < 30 on the daily and MACD crossover — is this a buy?")
 """
 

@@ -12,6 +12,8 @@ Or import and call:
     agent = BuyEvaluatorAgent()
     result = agent.evaluate(ticker="NVDA", trade_setup=MY_SETUP)
     # {"decision": "BUY", "risk_percent": 2}
+
+Note : This agent is a little expensive. So I will use the buy_tech_evaluator that uses local LLM and local modules for calculating indicators
 """
 
 import asyncio
