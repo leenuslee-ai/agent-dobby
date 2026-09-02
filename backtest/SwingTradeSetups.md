@@ -34,6 +34,12 @@ This trend-continuation engine functions by analyzing short-term daily exponenti
 Daily-RSI-2
 The Daily RSI-2 Momentum Connors Setup (Medium-High Trigger Frequency)Standard swing indicators use a 14-day window, which makes them slow to react. By drastically shortening your monitoring window to an ultra-fast 2-period RSI, your algorithm will catch rapid 2-to-3 day extreme price drops and sudden explosive moves.Daily Evaluation Logic (Entry):Price must be trading completely above its macro 200-day SMA (ensuring you only buy pullbacks in structural uptrends).The ultra-fast RSI (2-period) drops below 10 at the daily market close.Why It Triggers Constantly: In a normal market, healthy stocks like AMZN, AAPL, and GOOGL drop for 2 or 3 consecutive days all the time. A 2-period RSI will immediately flag these brief pullbacks as "exhausted" and buy the quick bounce.Risk Engine (Exit):Stop Loss: Set a hard stop at 2.0 * ATR (Average True Range) below your entry price.Take Profit: Close the trade the exact moment the RSI (2-period) crosses back above 70.
 
+Daily-RSI-14
+A simple swing setup using RSI 14-day window
+Daily Evaluation Logic 
+Entry: RSI14 < 30
+Exit: RSI > 70
+ 
 
 
 
@@ -387,9 +393,11 @@ Let's also add trade_data.py class in the db folder which will include a functio
 
 
 
+Daily-Chart-Breakout
+This setup relies on identifying an intraday reversal or a daily trendline breakout. It targets moments when massive fundamental news shifts market sentiment, creating an optimal low-risk, high-reward entry point.
+Entry Condition : Price breaks above the previous day's high or a short-term descending trendline.
+Exit Conditions:
+  Stop Loss : Placed strictly below today's daily low of $332.82 to mitigate downside risk).
+  Profit Target 1$346.50 
+  (The recent structural swing high from August 28th).Profit Target 2$351.00 (Major psychological resistance and multi-timeframe target).
 
-
-avg_cost
-market_value
-unrealized_pnl
-updated_at

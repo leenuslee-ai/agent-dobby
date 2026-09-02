@@ -94,4 +94,21 @@ The agent will be using LangGraph & LangChain capabilities and this will be the 
 
 Each agent instance will be managing one portfolio account. So the account_id needs to be initialized. 
 Use get_open_holdings(account_id, opening_transaction_type='Buy') to find the list of open holdings ( the stocks that we have aleady bought but needed to be evaluated to decide if they need to be sold to close)
-if the open holdings in this account is not empty 
+if the open holdings in this account is not empty , then invoke CurrentHoldingsEvaluatorAgent and get the updated current holdings
+    This step can be kicked off to run in an asyn mode
+If the account still has cash available for trading 
+{
+    Get all the (ticker, setup) pair by calling list_watchlist from. db/watchlist_data.py
+    Invoke the ResearchAgent.analyze_recommendation method to identify the list of potential (ticker and the corresponding setup) pairs for BUY. An entry in the watchlist can have 0 or more setups configured. If any stock doesn't include any setup, it should be skipped.
+
+    Eliminate the ones that don't have the BUY recommendation.
+    Then BuyTechEvaluatorAgent.evaluate_many should be called to shorten the buy list.
+    Once we have the buy list 
+        execute the buy trades if portfolio still has some balance. It is better to execute this sequentially making sure the market orders are executed fine and the cash balanace is updated properly
+}
+At the log end log a summary of what was all done in this run.
+
+
+python -m jobs.portfolio_manager_scheduler --now
+
+    
