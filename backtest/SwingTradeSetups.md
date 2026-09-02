@@ -11,7 +11,7 @@ This algorithm monitors daily charts to identify when highly capitalized, fundam
 #### Hard Stop: Set a trailing script condition Price is less than Entry Price - 3.5%.
 #### Take Profit: Exit code triggers automatically when RSI (14-period) crosses above 65.
 
-## 2. Momentum-Breakout -- Not easy
+## 2. Momentum-Breakout -- Not easy -- so not configured
 (Best for NVDA & TSLA)
 This setup monitors the daily consolidation ranges of highly volatile stocks and triggers an order execution when a breakout occurs with high institutional volume.
 ## Daily Evaluation Logic 
@@ -241,7 +241,7 @@ The Daily RSI-2 Momentum Connors Setup (Medium-High Trigger Frequency)Standard s
 
 {
   "id": "a8f0fb0f-a504-42eb-ae15-22ff8b1b433a",
-  "name": "Mean-Reversal (Best for GOOGL & AMZN)",
+  "name": "Mean-Reversal",
   "description": "Identifies oversold tech stocks on daily charts and enters when price is below 50-day EMA, RSI is below 40, and volume exceeds 1.2x average.",
   "definition": {
     "entry_conditions": [
@@ -367,3 +367,29 @@ The Daily RSI-2 Momentum Connors Setup (Medium-High Trigger Frequency)Standard s
   },
   "created_at": "2026-08-31T23:37:04.074764"
 }
+
+I would like to change the PortfolioHolding in models.py into two tables :
+Table PortfolioHolding  with the following fields 
+  id, account_id, ticker, opening_transaction_date, open_qty, opening_transaction_type, open_price, pending_qty, current_price, current_open_value, closed_value
+Table CloseTradeReference
+  closing_transaction_id, closing_qty, closing_price, closing_date
+
+One account can have any number entries for the same ticker - each entry representing an opening transaction. An opening transaction can be a BUY / SELL.
+One opening holding entry can be matched to one or more CloseTradeReference entries.
+
+Let's also add trade_data.py class in the db folder which will include a function called save_trade.
+  This will mainly accept the details for a PortfolioTransaction entry. Let's also add one more attribute called open_close ('Open'/'Close'). 
+  If open_close is 'Open' it should automatically add an entry into PortfolioHolding. pending_qty=open_qty, current_price=open_price, current_open_value = open_qty*open_price, closed_value = 0.
+  If open_close is 'Close' it should automatically find the open entries (with pending_qty > 0) in PortfolioHolding table and add the corresponding CloseTradeReference entries balancing the transaction qty against the PortfolioHolding.pending_qty. This means one Close transaction can close one or more PortfolioHolding entries. The PortfolioHolding.pending_qty should be properly adjusted. This will take care of the cases where we had so many buys as open transactions and one big SELL to close. Or we had more open SELL transactions and one buy later.
+  The qty of a close transaction will never be more than the total of all pending_qtys. In other words there should not be any extra qty left out :)
+  Please re-create the PortfolioHolding table as well
+
+
+
+
+
+
+avg_cost
+market_value
+unrealized_pnl
+updated_at
