@@ -11,16 +11,6 @@ MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "anthropic").lower()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
-def get_tickers(active_only: bool = True) -> list[str]:
-    """Return tickers from the watchlist table."""
-    from db.session import get_session
-    from db.models import Watchlist
-    with get_session() as session:
-        q = session.query(Watchlist.ticker)
-        if active_only:
-            q = q.filter(Watchlist.is_active == True)
-        return [row.ticker for row in q.order_by(Watchlist.ticker).all()]
-
 # ChromaDB
 CHROMA_DB_PATH = "./chroma_db"
 COLLECTION_NAME = "finance_news"

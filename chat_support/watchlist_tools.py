@@ -2,8 +2,11 @@
 
 from langchain_core.tools import tool
 
-from db.session import get_session
-from db.models import Watchlist
+from db.watchlist_data import (
+    add_watchlist_entry as _add,
+    update_watchlist_entry as _update,
+    list_watchlist as _list,
+)
 
 
 @tool
@@ -31,37 +34,8 @@ def add_watchlist_entry(
         JSON with the created or existing watchlist entry.
     """
     try:
-        with get_session() as session:
-            existing = session.get(Watchlist, ticker.upper())
-            if existing:
-                return {
-                    "responseType": "WatchlistEntry",
-                    "status": "already_exists",
-                    "ticker": existing.ticker,
-                    "industry": existing.industry,
-                    "category": existing.category,
-                    "setups": existing.setups or [],
-                    "is_active": existing.is_active,
-                }
-            entry = Watchlist(
-                ticker=ticker.upper(),
-                industry=industry,
-                category=category,
-                setups=setups or [],
-                is_active=True,
-            )
-            session.add(entry)
-            result = {
-                "responseType":    "WatchlistEntry",
-                "status":          "added",
-                "ticker":          entry.ticker,
-                "industry":        entry.industry,
-                "category":        entry.category,
-                "setups":          entry.setups,
-                "is_active":       entry.is_active,
-                "already_formatted": True,
-            }
-        return result
+        result = _add(ticker=ticker, industry=industry, category=category, setups=setups or None)
+        return {"responseType": "WatchlistEntry", "already_formatted": True, **result}
     except Exception as e:
         return {"responseType": "WatchlistEntry", "status": "error", "error": str(e)}
 
@@ -71,7 +45,7 @@ def update_watchlist_entry(
     ticker: str,
     industry: str = "",
     category: str = "",
-    setups: list[str] = [],
+    setups: list[str] | None = None,
     is_active: bool = None,
 ) -> dict:
     """Update an existing watchlist entry.
@@ -88,40 +62,15 @@ def update_watchlist_entry(
         ticker:    Stock symbol to update (e.g. "NVDA")
         industry:  New industry value (leave empty to keep existing)
         category:  New category value (leave empty to keep existing)
-        setups:    New full list of setup names (leave empty to keep existing)
+        setups:    New full list of setup names (pass [] to clear, omit to keep existing)
         is_active: Set active/inactive status (None to keep existing)
 
     Returns:
         JSON with the updated watchlist entry.
     """
     try:
-        with get_session() as session:
-            entry = session.get(Watchlist, ticker.upper())
-            if entry is None:
-                return {
-                    "responseType": "WatchlistEntry",
-                    "status": "not_found",
-                    "error": f"Ticker '{ticker.upper()}' not found in watchlist.",
-                }
-            if industry:
-                entry.industry = industry
-            if category:
-                entry.category = category
-            if setups:
-                entry.setups = setups
-            if is_active is not None:
-                entry.is_active = is_active
-            result = {
-                "responseType":    "WatchlistEntry",
-                "status":          "updated",
-                "ticker":          entry.ticker,
-                "industry":        entry.industry,
-                "category":        entry.category,
-                "setups":          entry.setups or [],
-                "is_active":       entry.is_active,
-                "already_formatted": True,
-            }
-        return result
+        result = _update(ticker=ticker, industry=industry, category=category, setups=setups, is_active=is_active)
+        return {"responseType": "WatchlistEntry", "already_formatted": True, **result}
     except Exception as e:
         return {"responseType": "WatchlistEntry", "status": "error", "error": str(e)}
 
@@ -144,27 +93,11 @@ def list_watchlist(active_only: bool = False) -> dict:
         JSON with a list of watchlist entries.
     """
     try:
-        with get_session() as session:
-            from sqlalchemy import select
-            stmt = select(Watchlist)
-            if active_only:
-                stmt = stmt.where(Watchlist.is_active == True)
-            entries = session.execute(stmt).scalars().all()
-            result = [
-                {
-                    "ticker":    e.ticker,
-                    "industry":  e.industry,
-                    "category":  e.category,
-                    "setups":    e.setups or [],
-                    "is_active": e.is_active,
-                    "added_at":  str(e.added_at),
-                }
-                for e in entries
-            ]
+        entries = _list(active_only=active_only)
         return {
             "responseType":    "WatchlistEntries",
-            "count":           len(result),
-            "entries":         result,
+            "count":           len(entries),
+            "entries":         entries,
             "already_formatted": True,
         }
     except Exception as e:

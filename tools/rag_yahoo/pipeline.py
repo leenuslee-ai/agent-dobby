@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from .ingestion import ingest_news
 from .vector_store import upsert_articles
 from agents.research_agent import ResearchAgent
-from config import get_tickers
+from db.watchlist_data import get_tickers
 
 
 def run_pipeline(
