@@ -21,7 +21,7 @@ class Config(Base):
     value = Column(Text, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_now, onupdate=_now)
 
-# Not used for now
+# Do not use this class for now
 class TradeSetup(Base):
     __tablename__ = "trade_setups"
 
@@ -97,6 +97,7 @@ class PortfolioHolding(Base):
     id                          = Column(String(36), primary_key=True)
     account_id                  = Column(String(36), ForeignKey("portfolio_accounts.id"), nullable=False)
     ticker                      = Column(String(20), nullable=False)
+    setup_name                  = Column(String(100), nullable=False, default="Manual")
     opening_transaction_date    = Column(DateTime(timezone=True), nullable=False)
     open_qty                    = Column(Float, nullable=False)
     opening_transaction_type    = Column(String(10), nullable=False)   # BUY | SELL
@@ -131,6 +132,7 @@ class PortfolioTransaction(Base):
     account_id      = Column(String(36), ForeignKey("portfolio_accounts.id"), nullable=False)
     broker_order_id = Column(String(100))
     ticker          = Column(String(20), nullable=False)
+    setup_name      = Column(String(100), nullable=False, default="Manual")
     side            = Column(String(10), nullable=False)    # BUY | SELL
     open_close      = Column(String(10), nullable=False)    # Open | Close
     qty             = Column(Float, nullable=False)

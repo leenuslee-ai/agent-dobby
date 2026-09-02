@@ -129,6 +129,35 @@ def get_account_info() -> str:
 
 
 @tool
+def get_order_status(order_id: str) -> str:
+    """Return the current status of an Alpaca order by its order ID.
+
+    Use this after placing a buy or sell order to confirm whether it has been
+    filled, is still pending, or was rejected.
+
+    Args:
+        order_id: The Alpaca order ID returned when the order was submitted.
+
+    Returns:
+        String with order symbol, qty, side, status, and filled details.
+    """
+    try:
+        client = _get_client()
+        order = client.get_order_by_id(order_id)
+        mode = "PAPER" if ALPACA_PAPER else "LIVE"
+        filled = (
+            f"filled_qty={order.filled_qty} @ avg_price=${order.filled_avg_price}"
+            if order.filled_qty else "not yet filled"
+        )
+        return (
+            f"[{mode}] Order {order.id}: {order.side} {order.qty} x {order.symbol} | "
+            f"status={order.status} | {filled}"
+        )
+    except Exception as e:
+        return f"Could not fetch order status for {order_id}: {e}"
+
+
+@tool
 def cancel_all_orders() -> str:
     """Cancel all open/pending orders in the Alpaca account."""
     try:
@@ -144,6 +173,7 @@ def cancel_all_orders() -> str:
 TRADING_TOOLS = [
     buy_market_order,
     sell_market_order,
+    get_order_status,
     get_positions,
     get_account_info,
     cancel_all_orders,

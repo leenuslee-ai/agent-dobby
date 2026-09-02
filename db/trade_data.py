@@ -13,6 +13,7 @@ def _holding_to_dict(h: PortfolioHolding) -> dict:
         "id":                       h.id,
         "account_id":               h.account_id,
         "ticker":                   h.ticker,
+        "setup_name":               h.setup_name,
         "opening_transaction_date": h.opening_transaction_date.isoformat() if h.opening_transaction_date else None,
         "open_qty":                 h.open_qty,
         "opening_transaction_type": h.opening_transaction_type,
@@ -88,6 +89,7 @@ def save_trade(
     open_close: str,
     qty: float,
     price: float,
+    setup_name: str = "Manual",
     status: str = "filled",
     filled_at: datetime | None = None,
     broker_order_id: str | None = None,
@@ -102,6 +104,7 @@ def save_trade(
                           "Close" — matches against open holdings (FIFO)
         qty:              Number of shares
         price:            Fill price per share
+        setup_name:       Name of the trading setup used (default "Manual")
         status:           Transaction status (default "filled")
         filled_at:        Fill timestamp (defaults to now)
         broker_order_id:  Optional broker reference
@@ -124,6 +127,7 @@ def save_trade(
             account_id=account_id,
             broker_order_id=broker_order_id,
             ticker=ticker.upper(),
+            setup_name=setup_name,
             side=side,
             open_close=open_close,
             qty=qty,
@@ -142,6 +146,7 @@ def save_trade(
                 id=str(uuid.uuid4()),
                 account_id=account_id,
                 ticker=ticker.upper(),
+                setup_name=setup_name,
                 opening_transaction_date=filled_at,
                 open_qty=qty,
                 opening_transaction_type=side,

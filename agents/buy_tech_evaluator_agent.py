@@ -28,16 +28,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tools.alphavantage.alphavantage_data import get_ohlcv_with_indicators
-from tools.trade_setup.condition_registry import build_condition
+from agents.evaluator_helpers import (
+    load_setup, fetch_latest_row, evaluate_conditions, generate_reason,
+    WARMUP_DAYS,
+)
 from tools.trade_setup.setup_store import SetupStore
-from tools.trade_setup.setup_schema import setup_from_dict
 from config import AGENT_MODEL
-
-
-# Minimum lookback to ensure all indicators warm up correctly.
-# SMA-200 requires the most history; everything else is shorter.
-_WARMUP_DAYS = 250
 
 
 class BuyTechEvaluatorAgent:
@@ -46,41 +42,13 @@ class BuyTechEvaluatorAgent:
         self._llm = None
 
     def _get_llm(self):
-        """Lazy-init Ollama LLM — only used for reason generation."""
         if self._llm is None:
             from langchain_ollama import ChatOllama
             self._llm = ChatOllama(model=AGENT_MODEL, temperature=0)
         return self._llm
 
-    def _generate_reason(
-        self,
-        ticker: str,
-        setup_name: str,
-        conditions: dict[str, str],
-        decision: str,
-    ) -> str:
-        """Ask Ollama for a one-sentence reason based on condition results."""
-        lines = "\n".join(f"  - {label}: {result}" for label, result in conditions.items())
-        prompt = (
-            f"Ticker: {ticker.upper()}\n"
-            f"Setup: {setup_name}\n"
-            f"Decision: {decision}\n"
-            f"Conditions:\n{lines}\n\n"
-            "In one or two sentences, explain why this decision was reached "
-            "based on the conditions above. Be concise and specific."
-        )
-        try:
-            response = self._get_llm().invoke(prompt)
-            return response.content.strip()
-        except Exception as e:
-            return f"Decision based on condition evaluation. (Reason generation failed: {e})"
-
     def evaluate(self, ticker: str, setup_name: str, generate_reason: bool = True) -> dict:
-        """Evaluate the most recent bar for ticker against the named setup.
-
-        Args:
-            ticker:     Stock symbol (e.g. "NVDA")
-            setup_name: Name of a setup stored in SetupStore (e.g. "RSI_MACD_TREND")
+        """Evaluate the most recent bar for ticker against the named setup's entry conditions.
 
         Returns:
             dict with keys: decision, risk_percent, conditions, reason, evaluated_at
@@ -92,8 +60,8 @@ class BuyTechEvaluatorAgent:
         print(f"{'='*60}")
 
         # ── 1. Load setup ─────────────────────────────────────────────────────
-        record = self._store.get(setup_name)
-        if record is None:
+        setup, record = load_setup(setup_name)
+        if setup is None:
             available = [s["name"] for s in self._store.list()]
             return {
                 "decision": "WAIT",
@@ -102,48 +70,30 @@ class BuyTechEvaluatorAgent:
                 "available_setups": available,
             }
 
-        definition = record["definition"]
-        definition.setdefault("name", record["name"])
-        setup = setup_from_dict(definition)
-
-        # ── 2. Fetch indicators — only enough rows for warmup ─────────────────
-        print(f"  [data] Fetching indicators (lookback={_WARMUP_DAYS} days)...")
-        df = get_ohlcv_with_indicators(ticker, lookback_days=_WARMUP_DAYS)
-        row = df.iloc[-1]
-        bar_date = df.index[-1].strftime("%Y-%m-%d")
+        # ── 2. Fetch latest bar ───────────────────────────────────────────────
+        print(f"  [data] Fetching indicators (lookback={WARMUP_DAYS} days)...")
+        bar_date, row = fetch_latest_row(ticker)
         print(f"  [data] Evaluating bar: {bar_date}  close=${row['close']:.2f}")
 
-        # ── 3. Evaluate each entry condition on the latest row ────────────────
-        conditions: dict[str, str] = {}
-        all_met = True
-
-        for label, condition_fn in setup.entry_conditions:
-            try:
-                met = bool(condition_fn(row))
-            except KeyError as e:
-                met = False
-                label = f"{label} (missing column: {e})"
-            status = "MET" if met else "NOT MET"
-            conditions[label] = status
+        # ── 3. Evaluate entry conditions ──────────────────────────────────────
+        conditions, all_met = evaluate_conditions(setup.entry_conditions, row, require_all=True)
+        for label, status in conditions.items():
             print(f"  [{status}] {label}")
-            if not met:
-                all_met = False
 
         decision = "BUY" if all_met else "WAIT"
         risk_percent = round(setup.position_value * 100, 2)
-
         print(f"\n  Decision: {decision}")
 
-        # ── 4. Generate reason via Ollama ─────────────────────────────────────
-        reason = self._generate_reason(ticker, setup_name, conditions, decision) if generate_reason else ""
+        # ── 4. Generate reason ────────────────────────────────────────────────
+        reason = generate_reason(self._get_llm(), ticker, setup_name, conditions, decision) if generate_reason else ""
 
         return {
-            "ticker": ticker.upper(),
-            "setup_name": setup_name,
-            "decision": decision,
+            "ticker":       ticker.upper(),
+            "setup_name":   setup_name,
+            "decision":     decision,
             "risk_percent": risk_percent,
-            "conditions": conditions,
-            "reason": reason,
+            "conditions":   conditions,
+            "reason":       reason,
             "evaluated_at": bar_date,
         }
 

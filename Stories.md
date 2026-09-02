@@ -56,14 +56,42 @@ echo $! prints the PID so you can kill it later with kill
 ---
 Let's add two more functions to trade_data.py 
     get_open_holdings(account_id, opening_transaction_type='Buy' if not specified)
+        - holdings are still open if open_qty > 0
     get_holdings(account_id, opening_transaction_type (can be 'Buy', 'Sell' or None ), opening_transaction_date)
         when it is None return all 
+    
 
+    -- done
+
+-- 
+Let's add a 'setup_name' attribute to PortfolioHolding and PortfolioTransaction models in models.py.
+And update the functions in trade_data to include the new attribute as well. We may use a special value called "Manual" to represent manual decisions (not using any setup :) )
+    -- done
+
+--
+Let's add a CurrentHoldingsEvaluatorAgent (current_holdings_evaluator_agent.py in agents folder) with the following characteristics:
+Each agent instance will be managing one portfolio account. So the account_id needs to be initialized.
+Use get_open_holdings(account_id, opening_transaction_type='Buy') to find the list of open holdings ( the stocks that we have aleady bought but needed to be evaluated to decide if they need to be sold to close)
+The agent will be using LangGraph & LangChain capabilities. It will use the tools defined in trade_executor_tool.py to execute market orders and check order status
+For each open holding it will do the following
+    1. Evaluate the exit condition and decide if we need to sell any shares 
+        - follow the pattern used in buy_tech_evaluator_agent.py
+        - if some code can be moved to a helper code so that they can be used by both agents - that will be great
+    2. Execute the sell_market_order and add some logic to retrieve the order status ( we may have to attempt a few times may be with some brief pauses )
+
+    3. Save the trade (functions are available in trade_data.py)
+Note : Execute whatever can be executed parallely ( in a safe way)
+
+Return the updated open holdings data so that the calling agent can use it to make buy decisions if necessary
+
+---
 
 Alright! Let's add the new version of the portfolio_manager_agent.py in the agents folder with the following characteristics.
-It should define a new agent class. I am going to invoke this agent thru a scheduler that will run at certain frequency. For the start I may run every hour during market hours starting 9:30AM EST. That sheduler job needs to be added to the jobs folder. The scheduler will use a separate instance of the agent and it needs to invoke them to run asynchronously. So
-for every run it will kick off multiple agents one for each account. 
+It should define a new agent class. Our application will invoke this agent thru a scheduler that will run at certain frequency. For the start we will run every hour during market hours starting at 9:30AM EST. That sheduler job needs to be added to the jobs folder. The scheduler will use a separate instance of the agent and it needs to invoke them to run asynchronously. So
+for every run it will kick off multiple agents one for each account. It can use the chat_support/portfolio_tools.list_portfolio_accounts tool to find the list of accounts.
 
-The agent will be using LangGraph & LangChain capabilities.
+The agent will be using LangGraph & LangChain capabilities and this will be the supervisor agent that also incorporates other agents : ResearchAgent, BuyTechEvaluatorAgent, CurrentHoldingsEvaluatorAgent
+
 Each agent instance will be managing one portfolio account. So the account_id needs to be initialized. 
-It can use the chat_support/portfolio_tools.list_portfolio_accounts tool to find the list of accounts
+Use get_open_holdings(account_id, opening_transaction_type='Buy') to find the list of open holdings ( the stocks that we have aleady bought but needed to be evaluated to decide if they need to be sold to close)
+if the open holdings in this account is not empty 
