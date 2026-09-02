@@ -94,35 +94,53 @@ class PortfolioAccount(Base):
 class PortfolioHolding(Base):
     __tablename__ = "portfolio_holdings"
 
-    id         = Column(String(36), primary_key=True)
-    account_id = Column(String(36), ForeignKey("portfolio_accounts.id"), nullable=False)
-    ticker     = Column(String(20), nullable=False)
-    qty        = Column(Float, nullable=False)
-    avg_cost   = Column(Float)
-    market_value = Column(Float)
-    unrealized_pnl = Column(Float)
-    updated_at = Column(DateTime(timezone=True), default=_now, onupdate=_now)
+    id                          = Column(String(36), primary_key=True)
+    account_id                  = Column(String(36), ForeignKey("portfolio_accounts.id"), nullable=False)
+    ticker                      = Column(String(20), nullable=False)
+    opening_transaction_date    = Column(DateTime(timezone=True), nullable=False)
+    open_qty                    = Column(Float, nullable=False)
+    opening_transaction_type    = Column(String(10), nullable=False)   # BUY | SELL
+    open_price                  = Column(Float, nullable=False)
+    pending_qty                 = Column(Float, nullable=False)
+    current_price               = Column(Float, nullable=False)
+    current_open_value          = Column(Float, nullable=False)
+    closed_value                = Column(Float, nullable=False, default=0.0)
 
-    __table_args__ = (UniqueConstraint("account_id", "ticker"),)
+    account      = relationship("PortfolioAccount", back_populates="holdings")
+    close_refs   = relationship("CloseTradeReference", back_populates="holding")
 
-    account = relationship("PortfolioAccount", back_populates="holdings")
+
+class CloseTradeReference(Base):
+    __tablename__ = "close_trade_references"
+
+    id                     = Column(String(36), primary_key=True)
+    holding_id             = Column(String(36), ForeignKey("portfolio_holdings.id"), nullable=False)
+    closing_transaction_id = Column(String(36), ForeignKey("portfolio_transactions.id"), nullable=False)
+    closing_qty            = Column(Float, nullable=False)
+    closing_price          = Column(Float, nullable=False)
+    closing_date           = Column(DateTime(timezone=True), nullable=False)
+
+    holding     = relationship("PortfolioHolding", back_populates="close_refs")
+    transaction = relationship("PortfolioTransaction", back_populates="close_refs")
 
 
 class PortfolioTransaction(Base):
     __tablename__ = "portfolio_transactions"
 
-    id           = Column(String(36), primary_key=True)
-    account_id   = Column(String(36), ForeignKey("portfolio_accounts.id"), nullable=False)
+    id              = Column(String(36), primary_key=True)
+    account_id      = Column(String(36), ForeignKey("portfolio_accounts.id"), nullable=False)
     broker_order_id = Column(String(100))
-    ticker       = Column(String(20), nullable=False)
-    side         = Column(String(10), nullable=False)   # BUY | SELL
-    qty          = Column(Float, nullable=False)
-    price        = Column(Float)
-    status       = Column(String(20), nullable=False)   # filled | cancelled | pending
-    filled_at    = Column(DateTime(timezone=True))
-    created_at   = Column(DateTime(timezone=True), default=_now)
+    ticker          = Column(String(20), nullable=False)
+    side            = Column(String(10), nullable=False)    # BUY | SELL
+    open_close      = Column(String(10), nullable=False)    # Open | Close
+    qty             = Column(Float, nullable=False)
+    price           = Column(Float)
+    status          = Column(String(20), nullable=False)    # filled | cancelled | pending
+    filled_at       = Column(DateTime(timezone=True))
+    created_at      = Column(DateTime(timezone=True), default=_now)
 
-    account = relationship("PortfolioAccount", back_populates="transactions")
+    account     = relationship("PortfolioAccount", back_populates="transactions")
+    close_refs  = relationship("CloseTradeReference", back_populates="transaction")
 
 
 class Watchlist(Base):
