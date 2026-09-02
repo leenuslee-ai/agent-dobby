@@ -38,3 +38,17 @@
 - "Give me a recommendation on MSFT"
 - "What's your call on AMD?"
 
+# Start the scheduler (runs at 7AM, 12PM, 8PM ET Mon–Fri)
+python -m jobs.rag_data_ingester
+# Run once immediately (uses saved 'since' state)
+python -m jobs.rag_data_ingester --now
+# Clear saved state and re-ingest from scratch
+python -m jobs.rag_data_ingester --reset
+
+nohup python3 -m jobs.rag_data_ingester > logs/rag_ingester.log 2>&1 &
+echo $!
+
+nohup keeps it running after you close the terminal
+> logs/rag_ingester.log 2>&1 sends both stdout and stderr to a log file
+& backgrounds it
+echo $! prints the PID so you can kill it later with kill

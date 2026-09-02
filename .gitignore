@@ -222,3 +222,7 @@ backtest_cache/
 tools/alphavantage/cache/
 chroma_db/
 *.csv
+
+# Logs and job state
+logs/
+jobs/.rag_ingester_state.json
