@@ -46,6 +46,7 @@ Note : Execute whatever can be executed parallely ( in a safe way)
 
 Return the updated open holdings data so that the calling agent can use it to make buy decisions if necessary
 
+    -- done
 ---
 
 Alright! Let's add the new version of the portfolio_manager_agent.py in the agents folder with the following characteristics.
@@ -70,3 +71,6 @@ If the account still has cash available for trading
 }
 At the log end log a summary of what was all done in this run.
 
+    -- done
+
+----

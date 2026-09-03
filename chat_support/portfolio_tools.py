@@ -4,8 +4,8 @@ import uuid
 
 from langchain_core.tools import tool
 
-from db.session import get_session
-from db.models import PortfolioAccount
+from tools.db.session import get_session
+from tools.db.models import PortfolioAccount
 
 
 @tool

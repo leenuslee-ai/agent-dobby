@@ -2,8 +2,8 @@
 
 from sqlalchemy import select
 
-from db.session import get_session
-from db.models import Watchlist
+from tools.db.session import get_session
+from tools.db.models import Watchlist
 
 
 def get_tickers(active_only: bool = True) -> list[str]:

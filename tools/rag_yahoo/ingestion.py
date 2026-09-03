@@ -8,7 +8,7 @@ from email.utils import parsedate_to_datetime
 
 import feedparser
 from config import ANTHROPIC_API_KEY, SUMMARIZE_MODEL, MODEL_PROVIDER
-from db.watchlist_data import get_tickers
+from tools.db.watchlist_data import get_tickers
 
 _PROMPT_TEMPLATE = """\
 This article was retrieved because it is relevant to stock {ticker}.

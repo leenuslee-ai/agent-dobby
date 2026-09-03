@@ -18,7 +18,7 @@ import pandas as pd
 
 from .backtester import Backtester, Setup
 from .example_setups import build_example_setup, build_ema_pullback_setup
-from db.watchlist_data import get_tickers
+from tools.db.watchlist_data import get_tickers
 
 
 def run_multi(

@@ -34,8 +34,8 @@ from agents.research_agent import ResearchAgent
 from agents.buy_tech_evaluator_agent import BuyTechEvaluatorAgent
 from agents.current_holdings_evaluator_agent import CurrentHoldingsEvaluatorAgent
 from agents.evaluator_helpers import poll_order_status
-from db.trade_data import get_open_holdings, save_trade
-from db.watchlist_data import list_watchlist
+from tools.db.trade_data import get_open_holdings, save_trade
+from tools.db.watchlist_data import list_watchlist
 from tools.alpaca.trade_executor_tool import _get_client
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce

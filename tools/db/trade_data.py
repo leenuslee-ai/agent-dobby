@@ -4,8 +4,8 @@ automatically manages PortfolioHolding / CloseTradeReference records."""
 import uuid
 from datetime import datetime, timezone
 
-from db.session import get_session
-from db.models import PortfolioHolding, PortfolioTransaction, CloseTradeReference
+from tools.db.session import get_session
+from tools.db.models import PortfolioHolding, PortfolioTransaction, CloseTradeReference
 
 
 def _holding_to_dict(h: PortfolioHolding) -> dict:

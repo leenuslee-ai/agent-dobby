@@ -1,6 +1,6 @@
 """Run once to create all tables."""
-from db.session import engine
-from db.models import Base
+from tools.db.session import engine
+from tools.db.models import Base
 
 if __name__ == "__main__":
     Base.metadata.create_all(engine)

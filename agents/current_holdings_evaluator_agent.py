@@ -30,7 +30,7 @@ from agents.evaluator_helpers import (
     load_setup, fetch_latest_row, evaluate_conditions, generate_reason,
     poll_order_status, WARMUP_DAYS,
 )
-from db.trade_data import get_open_holdings, save_trade
+from tools.db.trade_data import get_open_holdings, save_trade
 from tools.alpaca.trade_executor_tool import _get_client
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce

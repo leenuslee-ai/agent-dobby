@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from langchain_core.tools import tool
 
 from backtest import Backtester, SetupStore, get_ohlcv_with_indicators, setup_from_dict
-from db.backtest_run_data import get_backtest_run, list_backtest_runs as _list_backtest_runs
+from tools.db.backtest_run_data import get_backtest_run, list_backtest_runs as _list_backtest_runs
 
 _store = SetupStore()
 

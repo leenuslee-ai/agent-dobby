@@ -27,7 +27,7 @@ import pandas as pd
 
 from tools.alphavantage.alphavantage_data import get_ohlcv_with_indicators
 from tools import Setup, setup_from_dict
-from db.backtest_run_data import save_backtest_run
+from tools.db.backtest_run_data import save_backtest_run
 
 
 # ── Trade record ──────────────────────────────────────────────────────────────

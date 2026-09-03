@@ -2,7 +2,7 @@
 
 from langchain_core.tools import tool
 
-from db.watchlist_data import (
+from tools.db.watchlist_data import (
     add_watchlist_entry as _add,
     update_watchlist_entry as _update,
     list_watchlist as _list,
