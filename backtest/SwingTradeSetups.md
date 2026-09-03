@@ -374,30 +374,54 @@ Exit: RSI > 70
   "created_at": "2026-08-31T23:37:04.074764"
 }
 
-I would like to change the PortfolioHolding in models.py into two tables :
-Table PortfolioHolding  with the following fields 
-  id, account_id, ticker, opening_transaction_date, open_qty, opening_transaction_type, open_price, pending_qty, current_price, current_open_value, closed_value
-Table CloseTradeReference
-  closing_transaction_id, closing_qty, closing_price, closing_date
-
-One account can have any number entries for the same ticker - each entry representing an opening transaction. An opening transaction can be a BUY / SELL.
-One opening holding entry can be matched to one or more CloseTradeReference entries.
-
-Let's also add trade_data.py class in the db folder which will include a function called save_trade.
-  This will mainly accept the details for a PortfolioTransaction entry. Let's also add one more attribute called open_close ('Open'/'Close'). 
-  If open_close is 'Open' it should automatically add an entry into PortfolioHolding. pending_qty=open_qty, current_price=open_price, current_open_value = open_qty*open_price, closed_value = 0.
-  If open_close is 'Close' it should automatically find the open entries (with pending_qty > 0) in PortfolioHolding table and add the corresponding CloseTradeReference entries balancing the transaction qty against the PortfolioHolding.pending_qty. This means one Close transaction can close one or more PortfolioHolding entries. The PortfolioHolding.pending_qty should be properly adjusted. This will take care of the cases where we had so many buys as open transactions and one big SELL to close. Or we had more open SELL transactions and one buy later.
-  The qty of a close transaction will never be more than the total of all pending_qtys. In other words there should not be any extra qty left out :)
-  Please re-create the PortfolioHolding table as well
 
 
 
 
-Daily-Chart-Breakout
-This setup relies on identifying an intraday reversal or a daily trendline breakout. It targets moments when massive fundamental news shifts market sentiment, creating an optimal low-risk, high-reward entry point.
-Entry Condition : Price breaks above the previous day's high or a short-term descending trendline.
-Exit Conditions:
-  Stop Loss : Placed strictly below today's daily low of $332.82 to mitigate downside risk).
-  Profit Target 1$346.50 
-  (The recent structural swing high from August 28th).Profit Target 2$351.00 (Major psychological resistance and multi-timeframe target).
 
+
+EMA-8/21 Trend Pullback
+
+Concept: Enter when a strong uptrend pulls back briefly to the fast EMA and shows a recovery signal. Rides the trend rather than trying to catch bottoms.
+
+
+Entry conditions (all must be met):
+
+Price is above SMA-50 (macro uptrend filter)
+EMA-8 is above EMA-21 (short-term trend intact)
+Price touched or dipped below EMA-8 on the low (the pullback)
+Candle closed back above EMA-8 (recovery confirmed)
+ADX > 20 (trending market, not choppy)
+
+Exit conditions (any triggers):
+
+Price closes below EMA-21 (trend has broken)
+RSI-14 crosses above 75 (extended/overbought, take profits)
+
+Risk management:
+
+Stop loss: 4% below entry
+Take profit: 10% above entry (2.5:1 R:R)
+Position size: 2% of equity per trade
+
+---
+
+
+Why this works well for large-cap tech:
+
+These stocks trend strongly and pull back cleanly to their fast EMAs
+The ADX filter avoids choppy sideways periods which are common after earnings
+The EMA-8 > EMA-21 condition means you're only buying dips in confirmed uptrends, not catching falling knives
+The 4% stop is tight enough for large-caps which don't gap as violently as small-caps
+
+What to watch out for:
+
+Avoid entering right before earnings — the setup will fire but gap risk is high
+Works best when the broader market (SPY) is also in an uptrend
+
+---
+
+
+You could save this directly through the chat interface with something like:
+
+> "Save a setup called EMA8_21_PB: entry when price above SMA-50, EMA-8 above EMA-21, touched EMA-8, closed above EMA-8, ADX above 20. Exit when price below EMA-21 or RSI above 75. Stop loss 4%, take profit 10%, risk 2% of equity."

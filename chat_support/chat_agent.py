@@ -27,9 +27,16 @@ _SYSTEM_PROMPT = """\
 You are a trading assistant with access to tools for market data, backtesting, \
 recommendations, portfolio management, trade setups, and a watchlist.
 
-Use tools only when the user is clearly asking for data or an action. \
-For greetings, farewells, acknowledgements, or casual conversation, \
-respond conversationally without calling any tool."""
+RULES:
+- Use tools only when the user is clearly asking for data or an action.
+- Call ONLY the single most relevant tool per request. Never call multiple tools \
+in one response unless the user explicitly asked for multiple things.
+- After a tool returns its result, stop. Do not call additional tools to \
+"enrich" or "follow up" the response — wait for the user to ask.
+- For greetings, farewells, acknowledgements, or casual conversation, \
+respond conversationally without calling any tool.
+- When the user says "run it on X" or "try X instead", infer the setup name \
+and day count from the previous request and run the same backtest for ticker X."""
 
 
 # ── LLM factory ──────────────────────────────────────────────────────────────
@@ -67,16 +74,38 @@ def _build_graph():
         return "tools" if getattr(last, "tool_calls", None) else END
 
     def after_tools(state: AgentState) -> str:
-        """Return END directly if the tool marked its output as already formatted."""
-        last = state["messages"][-1]
-        if isinstance(last, ToolMessage):
+        """Return END if ALL tool results in this batch are already_formatted.
+
+        When the LLM makes parallel tool calls, ToolNode produces one ToolMessage
+        per call. We only short-circuit to END if every result in the batch is
+        already_formatted — otherwise route back to the agent so it can synthesise
+        the mixed results properly.
+        """
+        messages = state["messages"]
+
+        # Find the last AIMessage to know how many tool calls were made
+        n_tool_calls = 0
+        for msg in reversed(messages):
+            if isinstance(msg, AIMessage):
+                n_tool_calls = len(getattr(msg, "tool_calls", []))
+                break
+
+        # Collect the last n_tool_calls ToolMessages (this batch)
+        tool_msgs = [m for m in messages if isinstance(m, ToolMessage)]
+        batch = tool_msgs[-n_tool_calls:] if n_tool_calls else tool_msgs[-1:]
+
+        all_formatted = True
+        for tm in batch:
             try:
-                data = json.loads(last.content)
-                if data.get("already_formatted"):
-                    return END
+                data = json.loads(tm.content)
+                if not data.get("already_formatted"):
+                    all_formatted = False
+                    break
             except (json.JSONDecodeError, TypeError):
-                pass
-        return "agent"
+                all_formatted = False
+                break
+
+        return END if all_formatted else "agent"
 
     graph = StateGraph(AgentState)
     graph.add_node("agent", call_model)
@@ -111,18 +140,93 @@ class ChatAgent:
             config=config,
         )
 
+        # Find the best response message. Prefer an already_formatted ToolMessage
+        # that is NOT a simple list (e.g. prefer BackTestResults over TradeSetupList)
+        # so parallel tool calls don't clobber the primary result.
+        new_messages = result["messages"][prior_count:]
         last = result["messages"][-1]
+
+        _priority = {
+            "BackTestResults": 10, "Recommendation": 9, "CandlebarData": 8,
+            "TradeSetup": 7, "WatchlistEntry": 6, "PortfolioAccount": 5,
+        }
+        best_tool_msg = None
+        best_score = -1
+        for msg in new_messages:
+            if not isinstance(msg, ToolMessage):
+                continue
+            try:
+                data = json.loads(msg.content)
+                if data.get("already_formatted"):
+                    score = _priority.get(data.get("responseType", ""), 0)
+                    if score > best_score:
+                        best_score = score
+                        best_tool_msg = msg
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        source = best_tool_msg if best_tool_msg else last
         try:
-            response = json.loads(last.content)
+            response = json.loads(source.content)
         except (json.JSONDecodeError, TypeError):
-            response = {"message": last.content}
+            response = {"message": source.content}
         response.pop("already_formatted", None)
 
         if CHAT_AGENT_TRACE:
-            new_messages = result["messages"][prior_count:]
             response["trace"] = _build_trace(new_messages)
 
+        # Trim large array fields from ToolMessages stored in MemorySaver so
+        # they don't bloat the context window and confuse follow-up requests.
+        _trim_tool_messages(self._graph, config)
+
         return response
+
+
+# Keys that carry large arrays and should be stripped from conversation history.
+# The full data is returned to the API caller; only a compact summary is kept
+# in MemorySaver so follow-up messages have clean, understandable context.
+_LARGE_KEYS = ("candle_data", "bars", "trades", "entries", "runs", "accounts")
+
+
+def _trim_tool_messages(graph, config: dict) -> None:
+    """Replace large array fields in the most recent ToolMessages with counts.
+
+    This keeps the MemorySaver context window lean so the LLM can correctly
+    resolve follow-up references like "try it with MSFT instead".
+    """
+    try:
+        state = graph.get_state(config)
+        messages = state.values.get("messages", [])
+
+        updated: list[BaseMessage] = []
+        changed = False
+        for msg in messages:
+            if not isinstance(msg, ToolMessage):
+                updated.append(msg)
+                continue
+            try:
+                data = json.loads(msg.content)
+                trimmed = False
+                for key in _LARGE_KEYS:
+                    if key in data and isinstance(data[key], list) and len(data[key]) > 5:
+                        data[f"{key}_count"] = len(data[key])
+                        data[key] = f"[{len(data[key])} items — omitted from context]"
+                        trimmed = True
+                if trimmed:
+                    msg = ToolMessage(
+                        content=json.dumps(data),
+                        tool_call_id=msg.tool_call_id,
+                        name=msg.name,
+                    )
+                    changed = True
+            except (json.JSONDecodeError, TypeError):
+                pass
+            updated.append(msg)
+
+        if changed:
+            graph.update_state(config, {"messages": updated})
+    except Exception:
+        pass  # trimming is best-effort — never break the main flow
 
 
 def _build_trace(messages: list[BaseMessage]) -> list[dict]:
