@@ -40,6 +40,7 @@ from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 from config import ALPACA_PAPER, MOCK_STOCKS, MOCK_STOCKS_ENABLED, MOCK_SIMULATION_DATE
 from tools.mock_data.mock_executor import simulate_fill
+from tools.db.pm_agent_runs import save_pm_run
 
 _MIN_CASH_THRESHOLD = 100.0   # dollars
 _MOCK_DEFAULT_SETUP = "Daily-RSI-14"
@@ -253,8 +254,10 @@ class PortfolioManagerAgent:
     # ── Summary ───────────────────────────────────────────────────────────────
 
     def _print_summary(self, summary: dict, run_start: datetime) -> None:
-        elapsed      = (datetime.now(timezone.utc) - run_start).total_seconds()
-        sells        = [h for h in (summary["holdings_eval"] or []) if h.get("decision") == "SELL"]
+        elapsed = (datetime.now(timezone.utc) - run_start).total_seconds()
+        summary["elapsed_seconds"] = round(elapsed, 1)
+
+        sells = [h for h in (summary["holdings_eval"] or []) if h.get("decision") == "SELL"]
         print(f"\n{'='*60}")
         print(f"Run Summary | elapsed={elapsed:.1f}s")
         print(f"  Holdings evaluated : {len(summary['holdings_eval'] or [])}")
@@ -266,7 +269,13 @@ class PortfolioManagerAgent:
         if summary["errors"]:
             print(f"  Errors             : {summary['errors']}")
         print(f"{'='*60}\n")
-        summary["elapsed_seconds"] = round(elapsed, 1)
+
+        sim_date = str(MOCK_SIMULATION_DATE) if MOCK_SIMULATION_DATE else None
+        try:
+            saved = save_pm_run(summary, sim_date=sim_date)
+            summary["run_id"] = saved["id"]
+        except Exception as e:
+            print(f"[pm_agent_runs] Failed to save run summary: {e}")
 
     # ── Main run ──────────────────────────────────────────────────────────────
 

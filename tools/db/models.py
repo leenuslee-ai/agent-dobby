@@ -156,6 +156,27 @@ class Watchlist(Base):
     added_at  = Column(DateTime(timezone=True), default=_now)
 
 
+class PMAgentRun(Base):
+    """One row per PortfolioManagerAgent.run() invocation."""
+    __tablename__ = "pm_agent_runs"
+
+    id                  = Column(String(36), primary_key=True)
+    account_id          = Column(String(36), ForeignKey("portfolio_accounts.id"), nullable=False)
+    run_at              = Column(DateTime(timezone=True), nullable=False)
+    sim_date            = Column(String(10))          # YYYY-MM-DD when MOCK_SIMULATION_DATE is set
+    elapsed_seconds     = Column(Float)
+    holdings_evaluated  = Column(Integer, default=0)
+    sells_executed      = Column(Integer, default=0)
+    buys_executed       = Column(Integer, default=0)
+    open_holdings_count = Column(Integer, default=0)
+    summary_text        = Column(Text)                # human-readable for UI display
+    summary_json        = Column(JSON)                # full structured summary
+    errors              = Column(JSON)
+    created_at          = Column(DateTime(timezone=True), default=_now)
+
+    account = relationship("PortfolioAccount")
+
+
 class AgentLog(Base):
     __tablename__ = "agent_logs"
 
