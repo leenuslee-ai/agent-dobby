@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from agents.research_agent import ResearchAgent
+from agents.research_agent import ResearchAgent, _get_mock_price
 from agents.buy_tech_evaluator_agent import BuyTechEvaluatorAgent
 from agents.current_holdings_evaluator_agent import CurrentHoldingsEvaluatorAgent
 from agents.evaluator_helpers import poll_order_status
@@ -39,7 +39,7 @@ from tools.db.watchlist_data import list_watchlist
 from tools.alpaca.trade_executor_tool import _get_client
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
-from config import ALPACA_PAPER
+from config import ALPACA_PAPER, MOCK_STOCKS, MOCK_STOCKS_ENABLED, MOCK_SIMULATION_DATE
 
 
 # Minimum free cash fraction required before attempting new buys.
@@ -63,6 +63,20 @@ class PortfolioManagerAgent:
         except Exception as e:
             print(f"  [cash] Could not fetch account balance: {e}")
             return 0.0
+
+    def _get_current_price(self, ticker: str) -> float | None:
+        """Return the current price for a ticker — mock CSV for mock stocks, Alpaca otherwise."""
+        if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
+            # Parse price from the mock price string: "TICKER [MOCK]: price=$123.45 ..."
+            raw = _get_mock_price(ticker.upper())
+            try:
+                return float(raw.split("price=$")[1].split(" ")[0])
+            except Exception:
+                return None
+        try:
+            return float(_get_client().get_latest_trade(ticker).price)
+        except Exception:
+            return None
 
     def _research_ticker(self, ticker: str) -> dict:
         """Run ResearchAgent.analyze_recommendation for one ticker."""
@@ -162,7 +176,17 @@ class PortfolioManagerAgent:
                 for setup in entry["setups"]:
                     ticker_setup_pairs.append((entry["ticker"], setup))
 
-            print(f"[step 2a] Watchlist (ticker, setup) pairs: {len(ticker_setup_pairs)}")
+            # When running in mock mode, add mock stocks with their default setup
+            if MOCK_STOCKS_ENABLED:
+                existing_tickers = {t for t, _ in ticker_setup_pairs}
+                default_setup = "Daily-RSI-14"
+                for mock_ticker in MOCK_STOCKS:
+                    if mock_ticker not in existing_tickers:
+                        ticker_setup_pairs.append((mock_ticker, default_setup))
+                print(f"[step 2a] Mock mode: added {MOCK_STOCKS} with setup '{default_setup}'")
+
+            sim_label = f" (sim_date={MOCK_SIMULATION_DATE})" if MOCK_SIMULATION_DATE else ""
+            print(f"[step 2a] Watchlist (ticker, setup) pairs: {len(ticker_setup_pairs)}{sim_label}")
             if not ticker_setup_pairs:
                 print("[step 2a] No (ticker, setup) pairs found — skipping buy pipeline.")
             else:
@@ -209,10 +233,7 @@ class PortfolioManagerAgent:
                         trade_value = available_cash * risk_pct
 
                         # Get current price to calculate qty
-                        try:
-                            last_price = float(_get_client().get_latest_trade(ticker).price)
-                        except Exception:
-                            last_price = None
+                        last_price = self._get_current_price(ticker)
 
                         if not last_price or last_price <= 0:
                             print(f"  [buy] Could not get price for {ticker} — skipping.")

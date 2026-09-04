@@ -2,6 +2,8 @@
 
 import json
 import re
+from datetime import datetime, timezone
+from pathlib import Path
 
 import yfinance as yf
 from typing import Annotated, TypedDict
@@ -11,8 +13,38 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
-from config import ANTHROPIC_API_KEY, AGENT_MODEL, MODEL_PROVIDER
+from config import ANTHROPIC_API_KEY, AGENT_MODEL, MODEL_PROVIDER, MOCK_STOCKS, MOCK_STOCKS_ENABLED, MOCK_SIMULATION_DATE
 from tools.rag_yahoo import semantic_search
+
+_MOCK_CACHE_DIR = Path(__file__).parent.parent / "tools" / "alphavantage" / "cache"
+
+
+def _get_mock_price(ticker: str) -> str:
+    """Return price info for a mock ticker from the local CSV cache, up to today."""
+    cache_file = _MOCK_CACHE_DIR / f"{ticker}_daily.csv"
+    if not cache_file.exists():
+        return f"No mock price data found for {ticker}."
+    try:
+        import pandas as pd
+        df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        today = MOCK_SIMULATION_DATE or datetime.now(timezone.utc).date()
+        df = df[df.index.date <= today]
+        if df.empty:
+            return f"No price data available for {ticker} up to {today}."
+        latest = df.iloc[-1]
+        prev   = df.iloc[-2] if len(df) > 1 else latest
+        change_pct = (latest["close"] - prev["close"]) / prev["close"] * 100
+        week_ago   = df.iloc[-6]["close"] if len(df) >= 6 else df.iloc[0]["close"]
+        year_high  = df["high"].max()
+        year_low   = df["low"].min()
+        return (
+            f"{ticker} [MOCK]: price=${latest['close']:.2f} ({change_pct:+.2f}% today), "
+            f"week_ago=${week_ago:.2f}, "
+            f"52w_high=${year_high:.2f}, 52w_low=${year_low:.2f}, "
+            f"as_of={df.index[-1].date()}"
+        )
+    except Exception as e:
+        return f"Could not load mock price for {ticker}: {e}"
 
 
 # ── Tools ────────────────────────────────────────────────────────────────────
@@ -34,6 +66,8 @@ def search_news(query: str, ticker: str = "") -> str:
 @tool
 def get_stock_price(ticker: str) -> str:
     """Get current price, 52-week high/low, and market cap for a ticker."""
+    if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
+        return _get_mock_price(ticker.upper())
     try:
         info = yf.Ticker(ticker).fast_info
         hist = yf.Ticker(ticker).history(period="1d")

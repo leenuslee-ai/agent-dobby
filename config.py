@@ -68,6 +68,14 @@ DATABASE_URL = os.getenv(
 
 # ── Mock tickers (synthetic data only — never hit real market APIs) ──────────
 MOCK_STOCKS: list[str] = ["DOBBY", "OWALA", "MINI", "LUCAS", "PILLOW"]
+MOCK_STOCKS_ENABLED: bool = os.getenv("MOCK_STOCKS_ENABLED", "false").lower() == "true"
+# Set to YYYY-MM-DD to pin the "current date" for mock price lookups.
+# Leave unset to use today's real date.
+_mock_sim_date_str = os.getenv("MOCK_SIMULATION_DATE", "")
+MOCK_SIMULATION_DATE: "date | None" = (
+    __import__("datetime").date.fromisoformat(_mock_sim_date_str)
+    if _mock_sim_date_str else None
+)
 
 # ── Alpaca ───────────────────────────────────────────────────────────────────
 ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY", "")

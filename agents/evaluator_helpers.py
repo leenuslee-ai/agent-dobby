@@ -9,6 +9,7 @@ from tools.alphavantage.alphavantage_data import get_ohlcv_with_indicators
 from tools.trade_setup.condition_registry import build_condition
 from tools.trade_setup.setup_store import SetupStore
 from tools.trade_setup.setup_schema import Setup, setup_from_dict
+from config import MOCK_STOCKS, MOCK_STOCKS_ENABLED, MOCK_SIMULATION_DATE
 
 # SMA-200 needs the most history; keep this high enough for all indicators.
 WARMUP_DAYS = 250
@@ -27,8 +28,19 @@ def load_setup(setup_name: str) -> tuple[Setup, dict] | tuple[None, None]:
 
 
 def fetch_latest_row(ticker: str):
-    """Fetch indicator data and return the most recent bar as a (date_str, pd.Series) tuple."""
+    """Fetch indicator data and return the most recent bar as a (date_str, pd.Series) tuple.
+
+    For mock tickers (when MOCK_STOCKS_ENABLED), data is clipped to
+    MOCK_SIMULATION_DATE (or today) so forward data is never visible.
+    """
     df = get_ohlcv_with_indicators(ticker, lookback_days=WARMUP_DAYS)
+
+    if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
+        cutoff = MOCK_SIMULATION_DATE or datetime.now(timezone.utc).date()
+        df = df[df.index.date <= cutoff]
+        if df.empty:
+            raise ValueError(f"No data for {ticker} up to simulation date {cutoff}")
+
     row = df.iloc[-1]
     bar_date = df.index[-1].strftime("%Y-%m-%d")
     return bar_date, row
