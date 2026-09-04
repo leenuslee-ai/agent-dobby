@@ -31,18 +31,39 @@
 - show the back test result id = 
 - add stock to watch list
 - add setup to watch list for stock
+- add account 
+        broker:       Broker name (e.g. "alpaca", "td_ameritrade")
+        account_id:   The broker-assigned account identifier
+        display_name: Optional friendly label for this account
+        is_paper:     True for paper/simulated trading, False for live (default True)
+        cash:         Starting cash balance (default 0.0)
+        equity:       Starting equity value (default 0.0)
+-- list accounts
+
+Accounts Specific
+=================
+-- Portfolio details / view (Current Holdings / Historical )
+-- What is happening -- PM logs 
+-- News about current holdings
+-- 
+
+General Questions
+-------------------
+
 - "Should I buy NVDA?"
 - "What do you think about AAPL?"
 - "Is TSLA a good trade right now?"
 - "Give me a recommendation on MSFT"
 - "What's your call on AMD?"
 
+Mock Data Preparations and Mock Runs For Testing Purposes
+========================================================
+- run backtest for DOBBY using Daily-RSI-14 setup over 300 days
 
+Some notes 
+==========
+Need to take care of dockerizing the whole applciation.. Later
 
-
-
-Jobs 
-====
 # Start the scheduler (runs at 7AM, 12PM, 8PM ET Mon–Fri)
 python -m jobs.rag_data_ingester
 # Run once immediately (uses saved 'since' state)
@@ -58,7 +79,12 @@ nohup keeps it running after you close the terminal
 & backgrounds it
 echo $! prints the PID so you can kill it later with kill
 
+Usage:
+    python -m jobs.portfolio_manager_scheduler          # start scheduler
+    python -m jobs.portfolio_manager_scheduler --now    # run once immediately
 
+uvicorn chat_support.chat_api:app --reload --port 8800
+npm run dev
 
 
 

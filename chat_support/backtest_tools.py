@@ -28,13 +28,16 @@ def _candle_bars(ticker: str, days: int) -> list[dict]:
 
 
 @tool
-def run_backtest(ticker: str, days: int, setup_name: str) -> dict:
+def run_backtest(ticker: str, setup_name: str, days: int = 1825) -> dict:
     """Run a backtest of a named trading setup against real historical data.
 
     Args:
         ticker:     Stock symbol (e.g. "AAPL")
-        days:       Number of calendar days of history to test against
         setup_name: Name of a setup stored in the setup database
+        days:       Number of calendar days of history to test against.
+                    Default is 1825 (5 years). Use a longer window (e.g. 1825)
+                    unless the user explicitly requests a shorter period — most
+                    setups need many months of data to produce meaningful results.
 
     Returns:
         JSON with summary metrics, trade log, and the underlying candle data.

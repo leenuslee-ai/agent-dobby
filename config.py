@@ -66,6 +66,9 @@ DATABASE_URL = os.getenv(
     "postgresql://dobby:Dobby&Friends888*@localhost:5432/agent_dobby",
 )
 
+# ── Mock tickers (synthetic data only — never hit real market APIs) ──────────
+MOCK_STOCKS: list[str] = ["DOBBY", "OWALA", "MINI", "LUCAS", "PILLOW"]
+
 # ── Alpaca ───────────────────────────────────────────────────────────────────
 ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY", "")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "")

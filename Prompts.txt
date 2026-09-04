@@ -74,3 +74,12 @@ At the log end log a summary of what was all done in this run.
     -- done
 
 ----
+Generate mock data
+
+Let's look at the definition of the setup "Daily-RSI-14". Can we create a candlebar (ohlcv) data for the demo stocks ("OWALA", "MINI", "LUCAS", "PILLOW") by simulating daily data for the past 5 years. save the file to the backtest_cache folder.
+There are some samples files for real stock tickers. Basically when I run a backtest it should be buying and selling at least 5 to 10 times in a year. It doesn't have to be all winning trades.
+This data will be used to quickly demo the backtest process to some folks to get some feedback. Let's data for 3 more months in the future ( sept and oct, nov) as I would like to use this for evaluating the PortfolioManagerAgent in a simulated fashion.
+
+
+
+
