@@ -34,7 +34,7 @@ from tools.db.trade_data import get_open_holdings, save_trade
 from tools.alpaca.trade_executor_tool import _get_client
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
-from config import AGENT_MODEL, ALPACA_PAPER, MOCK_STOCKS, MOCK_STOCKS_ENABLED
+from config import AGENT_MODEL, ALPACA_PAPER, MOCK_STOCKS, MOCK_STOCKS_ENABLED, MOCK_SIMULATION_DATE
 from tools.mock_data.mock_executor import simulate_fill
 
 
@@ -101,7 +101,11 @@ class CurrentHoldingsEvaluatorAgent:
         decision = "SELL" if should_sell else "HOLD"
         print(f"[{ticker}] Decision: {decision}")
 
-        reason = generate_reason(self._get_llm(), ticker, setup_name, conditions, decision)
+        # Skip LLM reason generation in mock simulation — no Ollama calls needed.
+        if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
+            reason = f"{decision} based on technical conditions."
+        else:
+            reason = generate_reason(self._get_llm(), ticker, setup_name, conditions, decision)
 
         return {
             "holding_id":     holding["id"],
