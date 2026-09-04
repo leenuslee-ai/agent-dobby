@@ -78,6 +78,9 @@ class PortfolioManagerAgent:
     # ── Research ──────────────────────────────────────────────────────────────
 
     def _research_ticker(self, ticker: str) -> dict:
+        # In mock mode, skip the LLM call and pass straight to technical eval.
+        if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
+            return {"ticker": ticker, "recommendation": "BUY", "reason": "Mock stock — research skipped."}
         try:
             result = self._research.analyze_recommendation(
                 f"Should I buy {ticker} right now? Check latest news and price."
