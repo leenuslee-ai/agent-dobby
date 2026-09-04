@@ -40,6 +40,7 @@ from tools.alpaca.trade_executor_tool import _get_client
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 from config import ALPACA_PAPER, MOCK_STOCKS, MOCK_STOCKS_ENABLED, MOCK_SIMULATION_DATE
+from tools.mock_data.mock_executor import simulate_fill
 
 
 # Minimum free cash fraction required before attempting new buys.
@@ -56,7 +57,9 @@ class PortfolioManagerAgent:
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _get_available_cash(self) -> float:
-        """Return current buying power from Alpaca."""
+        """Return current buying power — fixed simulation balance in mock mode."""
+        if MOCK_STOCKS_ENABLED:
+            return 10_000.0   # fixed paper balance for simulation runs
         try:
             acct = _get_client().get_account()
             return float(acct.buying_power)
@@ -91,23 +94,26 @@ class PortfolioManagerAgent:
 
     def _execute_buy(self, ticker: str, setup_name: str, qty: float) -> dict:
         """Place a market BUY, poll for fill, persist the open trade."""
-        mode = "PAPER" if ALPACA_PAPER else "LIVE"
+        mode = "MOCK" if (MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS) else ("PAPER" if ALPACA_PAPER else "LIVE")
         print(f"  [buy] [{mode}] BUY {qty} x {ticker} (setup={setup_name})")
-        try:
-            client = _get_client()
-            req = MarketOrderRequest(
-                symbol=ticker,
-                qty=qty,
-                side=OrderSide.BUY,
-                time_in_force=TimeInForce.DAY,
-            )
-            order = client.submit_order(req)
-            print(f"  [buy] Order submitted: id={order.id} status={order.status}")
-        except Exception as e:
-            print(f"  [buy] Order submission failed for {ticker}: {e}")
-            return {"ticker": ticker, "status": "order_failed", "error": str(e)}
 
-        fill = poll_order_status(client, str(order.id), max_attempts=6, pause_secs=2.0)
+        if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
+            fill = simulate_fill(ticker, qty, side="BUY")
+        else:
+            try:
+                client = _get_client()
+                req = MarketOrderRequest(
+                    symbol=ticker,
+                    qty=qty,
+                    side=OrderSide.BUY,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = client.submit_order(req)
+                print(f"  [buy] Order submitted: id={order.id} status={order.status}")
+            except Exception as e:
+                print(f"  [buy] Order submission failed for {ticker}: {e}")
+                return {"ticker": ticker, "status": "order_failed", "error": str(e)}
+            fill = poll_order_status(client, str(order.id), max_attempts=6, pause_secs=2.0)
         print(f"  [buy] Fill: status={fill['status']} qty={fill['filled_qty']} @ ${fill['filled_avg_price']}")
 
         if fill["status"] in ("filled", "partially_filled") and fill["filled_qty"] > 0:

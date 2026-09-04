@@ -34,7 +34,8 @@ from tools.db.trade_data import get_open_holdings, save_trade
 from tools.alpaca.trade_executor_tool import _get_client
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
-from config import AGENT_MODEL, ALPACA_PAPER
+from config import AGENT_MODEL, ALPACA_PAPER, MOCK_STOCKS, MOCK_STOCKS_ENABLED
+from tools.mock_data.mock_executor import simulate_fill
 
 
 class CurrentHoldingsEvaluatorAgent:
@@ -122,26 +123,28 @@ class CurrentHoldingsEvaluatorAgent:
         """Place a market SELL, poll for fill, then persist the close trade."""
         ticker = eval_result["ticker"]
         qty    = eval_result["pending_qty"]
-        mode   = "PAPER" if ALPACA_PAPER else "LIVE"
+        mode   = "MOCK" if (MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS) else ("PAPER" if ALPACA_PAPER else "LIVE")
 
         print(f"\n[{ticker}] Placing [{mode}] SELL {qty} shares...")
-        try:
-            client = _get_client()
-            req = MarketOrderRequest(
-                symbol=ticker,
-                qty=qty,
-                side=OrderSide.SELL,
-                time_in_force=TimeInForce.DAY,
-            )
-            order = client.submit_order(req)
-            print(f"[{ticker}] Order submitted: id={order.id} status={order.status}")
-        except Exception as e:
-            print(f"[{ticker}] Order submission failed: {e}")
-            eval_result["order_error"] = str(e)
-            return eval_result
 
-        # ── Poll for fill ────────────────────────────────────────────────────
-        fill = poll_order_status(client, str(order.id), max_attempts=6, pause_secs=2.0)
+        if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
+            fill = simulate_fill(ticker, qty, side="SELL")
+        else:
+            try:
+                client = _get_client()
+                req = MarketOrderRequest(
+                    symbol=ticker,
+                    qty=qty,
+                    side=OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = client.submit_order(req)
+                print(f"[{ticker}] Order submitted: id={order.id} status={order.status}")
+            except Exception as e:
+                print(f"[{ticker}] Order submission failed: {e}")
+                eval_result["order_error"] = str(e)
+                return eval_result
+            fill = poll_order_status(client, str(order.id), max_attempts=6, pause_secs=2.0)
         eval_result["order"] = fill
         print(f"[{ticker}] Fill: status={fill['status']} qty={fill['filled_qty']} @ ${fill['filled_avg_price']}")
 
