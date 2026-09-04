@@ -2,11 +2,13 @@
 
 Tools
 -----
-get_candlebar_data   — real OHLCV history from Alpha Vantage (cached locally)
-run_backtest         — runs a named setup from the DB against real historical data
-list_backtest_runs   — lists saved backtest runs, optionally filtered by ticker
-get_backtest_result  — retrieves a saved backtest run by run ID
-get_recommendation   — returns BUY/SELL/HOLD/WAIT + one-line reason for a ticker
+get_candlebar_data      — real OHLCV history from Alpha Vantage (cached locally)
+run_backtest            — runs a named setup from the DB against real historical data
+list_backtest_runs      — lists saved backtest runs, optionally filtered by ticker
+get_backtest_result     — retrieves a saved backtest run by run ID
+get_recommendation      — returns BUY/SELL/HOLD/WAIT + one-line reason for a ticker
+get_pm_run_result       — retrieves a single PM agent run by ID
+list_pm_run_results     — lists PM agent run summaries for an account
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from langchain_core.tools import tool
 from backtest import get_ohlcv_with_indicators
 from .backtest_tools import run_backtest, list_backtest_runs, get_backtest_result
 from .portfolio_tools import create_portfolio_account, list_portfolio_accounts
+from .pm_run_tools import get_pm_run_result, list_pm_run_results
 from .setup_tools import save_trade_setup, list_trade_setups, get_trade_setup
 from .watchlist_tools import add_watchlist_entry, update_watchlist_entry, list_watchlist
 
@@ -164,6 +167,8 @@ CHAT_AGENT_TOOLS = [
     get_recommendation,
     create_portfolio_account,
     list_portfolio_accounts,
+    get_pm_run_result,
+    list_pm_run_results,
     save_trade_setup,
     list_trade_setups,
     get_trade_setup,
