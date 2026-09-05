@@ -36,18 +36,23 @@ def list_pm_run_results(
     limit: int = 20,
     account_id: str = "",
 ) -> dict:
-    """List PortfolioManagerAgent run summaries, newest first.
+    """List PortfolioManagerAgent run results — buys, sells, and decisions made per day.
 
-    Use this when the user asks to review recent PM agent activity, e.g.:
-      - "List portfolio manager runs"
-      - "Show me the PM runs from September"
+    Use this when the user asks about PM agent run history, daily run results,
+    or what the agent bought/sold. Examples:
+      - "List pm run results"
+      - "Show me the PM runs for PaperAcct1"
+      - "List pm run results from September"
       - "What did the agent do this week?"
+      - "Show recent agent activity"
+
+    Do NOT use this to list brokerage accounts — use list_portfolio_accounts for that.
 
     Args:
         from_date:  Optional start date filter (YYYY-MM-DD).
         to_date:    Optional end date filter (YYYY-MM-DD).
         limit:      Max number of runs to return (default 20).
-        account_id: Optional portfolio account UUID. Defaults to the first account.
+        account_id: Optional account name or UUID. Defaults to the first account.
 
     Returns:
         JSON with a list of run summaries, newest first.

@@ -42,13 +42,15 @@ def create_portfolio_account(
 
 @tool
 def list_portfolio_accounts() -> dict:
-    """List all portfolio accounts stored in the database.
+    """List all portfolio brokerage accounts (not run history or trades).
 
-    Use this tool when the user asks to see, list, or show their accounts.
+    Use this tool ONLY when the user asks about their brokerage accounts themselves.
     Examples:
       - "Show me my accounts"
       - "List all portfolio accounts"
       - "What accounts do I have?"
+
+    Do NOT use this for PM agent runs, trade history, or run results.
 
     Returns:
         JSON with a list of portfolio accounts.
