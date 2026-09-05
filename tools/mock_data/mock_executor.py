@@ -49,7 +49,7 @@ def simulate_fill(ticker: str, qty: float, side: str) -> dict:
         "status":           "filled",
         "filled_qty":       qty,
         "filled_avg_price": price,
-        "filled_at":        datetime.now(timezone.utc).isoformat(),
+        "filled_at":        datetime(*(MOCK_SIMULATION_DATE or datetime.now(timezone.utc).date()).timetuple()[:3], tzinfo=timezone.utc).isoformat(),
     }
     sim_date = MOCK_SIMULATION_DATE or datetime.now(timezone.utc).date()
     print(

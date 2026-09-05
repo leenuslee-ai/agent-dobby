@@ -153,6 +153,7 @@ class PortfolioManagerAgent:
                 price=fill["filled_avg_price"],
                 setup_name=setup_name,
                 status=fill["status"],
+                filled_at=datetime.fromisoformat(fill["filled_at"]) if fill.get("filled_at") else None,
                 broker_order_id=fill["order_id"],
             )
             print(f"  [buy] Trade persisted: txn_id={trade['transaction_id']}")

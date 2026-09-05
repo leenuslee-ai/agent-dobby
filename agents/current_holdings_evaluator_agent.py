@@ -164,7 +164,8 @@ class CurrentHoldingsEvaluatorAgent:
                     price=fill["filled_avg_price"],
                     setup_name=eval_result["setup_name"],
                     status=fill["status"],
-                    broker_order_id=str(order.id),
+                    filled_at=datetime.fromisoformat(fill["filled_at"]) if fill.get("filled_at") else None,
+                    broker_order_id=fill["order_id"],
                 )
                 eval_result["trade_saved"] = trade_result
                 print(f"[{ticker}] Trade persisted: txn_id={trade_result['transaction_id']}")
