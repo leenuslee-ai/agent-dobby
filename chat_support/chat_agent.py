@@ -35,13 +35,20 @@ Tool selection guide:
 - "all holdings" or "including closed" → get_portfolio_holdings
 - "trades", "transactions", "what did it buy/sell" → get_portfolio_trades
 - "pm runs", "agent runs", "what did the agent do", "daily run" → list_pm_run_results
-- "accounts", "what accounts" → list_portfolio_accounts
-- "watchlist" → list_watchlist
+- "show pm run id" → get_pm_run_result
+- "create account", "add account", "register account", "new account" → create_portfolio_account
+- "accounts", "what accounts", "list accounts" → list_portfolio_accounts
+- "add [ticker] to watchlist" (new ticker) → add_watchlist_entry
+- "update watchlist entry", "change watchlist", "deactivate watchlist", "add setup to [ticker]" → update_watchlist_entry
+- "show watchlist", "list watchlist", "what's on the watchlist" → list_watchlist
 - "recommend", "should I buy" → get_recommendation
 - "backtest runs", "list backtests", "backtest history" → list_backtest_runs
 - "show backtest result", "get backtest id", "backtest run id" → get_backtest_result
 - "run a backtest", "backtest [ticker]" → run_backtest
 - "candlebar", "price history", "ohlcv" → get_candlebar_data
+- "trade setup", "list setups" → list_trade_setups
+- "get setup [name]" → get_trade_setup
+- "save setup", "create setup" → save_trade_setup
 
 Rules:
 - Call exactly one tool per request unless the user explicitly asks for multiple things.
