@@ -45,7 +45,14 @@ Accounts Specific
 -- Portfolio details / view (Current Holdings / Historical )
 -- What is happening -- PM logs 
 -- News about current holdings
--- 
+-- "List PM runs for account PaperAcct1 from September"
+-- "Show me run xyz-456"
+-- Show account holdings
+-- 'How is it going with PaperAcct1 account'
+-- 'What is happening with my portfolio'
+-- 'Give me an update on PaperAcct1'
+-- 'PaperAcct1 account holdings'
+
 
 General Questions
 -------------------
@@ -82,6 +89,40 @@ echo $! prints the PID so you can kill it later with kill
 Usage:
     python -m jobs.portfolio_manager_scheduler          # start scheduler
     python -m jobs.portfolio_manager_scheduler --now    # run once immediately
+
+python3 -m jobs.portfolio_manager_scheduler --now
+
+python3 -c "
+from tools.db.pm_agent_runs import list_pm_runs
+runs = list_pm_runs('<account_id>', limit=5)
+for r in runs:
+    print(r['id'], r['sim_date'], r['buys_executed'], 'buys', r['sells_executed'], 'sells')
+    print(r['summary_text'])
+"
+
+python3 -m jobs.pm_simulation_runner \
+  --account ed36fd4a-b742-46c4-9733-b6b8f99f96db \
+  --start 2026-09-04 \
+  --end 2026-09-30
+
+python3 -c "
+from tools.db.pm_agent_runs import list_pm_runs
+runs = list_pm_runs('ed36fd4a-b742-46c4-9733-b6b8f99f96db', limit=30)
+print(f'{len(runs)} runs saved')
+for r in runs:
+    print(f\"  {r['sim_date']}  buys={r['buys_executed']}  sells={r['sells_executed']}  open={r['open_holdings_count']}\")
+"
+
+pkill -f pm_simulation_runner
+nohup python3 -m jobs.pm_simulation_runner --account ed36fd4a-b742-46c4-9733-b6b8f99f96db --start 2026-09-04 --end 2026-09-30 > logs/pm_simulation_sep.log 2>&1 &
+nohup python3 -m jobs.pm_simulation_runner --account ed36fd4a-b742-46c4-9733-b6b8f99f96db --start 2026-10-01 --end 2026-10-31 > logs/pm_simulation_oct.log 2>&1 & 
+
+echo "PID: $!"
+
+tail -f logs/pm_simulation_sep.log
+
+python3 -c "from tools.db.portfolio_data import set_account_cash; set_account_cash('ed36fd4a-b742-46c4-9733-b6b8f99f96db', 10000.0)"
+
 
 uvicorn chat_support.chat_api:app --reload --port 8800
 npm run dev

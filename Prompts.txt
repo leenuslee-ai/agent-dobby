@@ -76,9 +76,57 @@ At the log end log a summary of what was all done in this run.
 ----
 Generate mock data
 
-Let's look at the definition of the setup "Daily-RSI-14". Can we create a candlebar (ohlcv) data for the demo stocks ("OWALA", "MINI", "LUCAS", "PILLOW") by simulating daily data for the past 5 years. save the file to the backtest_cache folder.
+Let's look at the definition of the setup "Daily-RSI-14". Can we create a candlebar (ohlcv) data for the demo stocks ("DOBBY", "OWALA", "MINI", "LUCAS", "PILLOW") by simulating daily data for the past 5 years. save the file to the backtest_cache folder.
 There are some samples files for real stock tickers. Basically when I run a backtest it should be buying and selling at least 5 to 10 times in a year. It doesn't have to be all winning trades.
 This data will be used to quickly demo the backtest process to some folks to get some feedback. Let's data for 3 more months in the future ( sept and oct, nov) as I would like to use this for evaluating the PortfolioManagerAgent in a simulated fashion.
+-- done
+
+--
+Daily PortfolioManagerAgent Runs simulation
+PortfolioManagerAgent calls ResearchAgent.analyze_recommendation with a prompt like  "Should I buy {ticker} right now? Check latest news and price".
+I am trying run the PortfolioManagerAgent to simulate the daily runs for about 3 months into the future. We already have the mock data for mock stocks 
+( configured in config.py as MOCK_STOCKS) saved in alphavantage/cache folder which I think will be used. 
+
+Step 1 :
+But in order to make sure the ResearchAgent also does its work for the simulation to work, we need to save a bunch of news articles based entries into the RAG store.
+Can we add some simulated entries for the MOCK_STOCKS with the published dates from last week to end of october.  Please save this news generator as a separate code that I can run later as well.
+
+MOCK_STOCKS_ENABLED=true
+MOCK_SIMULATION_DATE=2026-09-04   # pin to rerun from start; remove to use today
+
+    -- done
+
+-- 
+Saving PortfoliManagerAgent run summary 
+
+Let's add a new model to save the summary of each PortfolioManagerAgentRun. The data can be saved as a text that can be easily displayed by ReactJS UI later.
+The models are defined in db/models.py and functions to persist(save , retrieve one, retrieve list given a date range criteria ) these summary can be implemented in db/pm_agent_runs.py.
+A new chat_support/pm_run_tools.py can be added to retrieve the pm run results to show them in the UI.
+Also chat_support/portfolio_tools.py already includes a couple of tools. The db access code can be refactored out and saved to db/portfolio_data.py.
+Then update PortfoliManagerAgent to properly save the run summary details.
+
+-- Now I am ready to run the PortfolioManagerAgent simulation run 
+    -done
+-- let's add three more tools "get holdings", "get open holdings", "get trades" in portfolio_tools.py. The code to retrieve the data can be found in trade_data.py
+   -- done
+---
+I notice an error in PM Agent run logs "trade_error": "cannot access local variable 'order' where it is not associated with a value"
+Also when we run simulation pm agent runs can it use a datetime value (of the run date) for all those filled_at fields. If I am not wrong it seems to be using the system time ( which is the right thing for regular runs)
+
+
+-- Tell me once again why the simulation run takes a while -- don't make any changes as I am running the simulation now
+    For each simulated business day, the runner spawns a fresh subprocess which runs the full PortfolioManagerAgent. The slow parts are:
+    Research agent — for real tickers on the watchlist (MSFT, AAPL, NVDA, etc.) it makes live web searches and an Ollama LLM call per ticker to generate a BUY/SELL/WAIT recommendation. Mock tickers skip this entirely.
+    Buy tech evaluator — fetches OHLCV data and runs indicator calculations for every ticker that passed research.
+    Holdings evaluator — for each open holding, evaluates exit conditions. Also calls Ollama for generate_reason on real tickers (mock tickers skip it).
+    Subprocess startup overhead — each day is a separate Python process, so interpreter + all imports cold-start every time.
+    The mock tickers (DOBBY, OWALA, etc.) are fast — pure local CSV reads with no LLM calls. The real watchlist tickers are what add minutes per day. With 10 business days and several real tickers, the total run could take 20–40 minutes depending on how many end up as BUY candidates.
+    -- done
+
+--  The chat agent tools  get_portfolio_holdings, get_open_portfolio_holdings, get_portfolio_trades, get_pm_run_result, list_pm_run_results and the corresponding DB access methods don't include the account_name field.
+    Let's add the account name field at the top level of the results - like the individual trades or holdings don't have to include account_name again and again. But the top level should include.
+
+
 
 
 
