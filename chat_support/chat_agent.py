@@ -34,11 +34,12 @@ Tool selection guide:
 - "holdings", "positions", "what does the agent hold" → get_open_portfolio_holdings
 - "all holdings" or "including closed" → get_portfolio_holdings
 - "trades", "transactions", "what did it buy/sell" → get_portfolio_trades
-- "pm runs", "agent runs", "what did the agent do" → list_pm_run_results
+- "pm runs", "agent runs", "what did the agent do", "daily run" → list_pm_run_results
 - "accounts", "what accounts" → list_portfolio_accounts
 - "watchlist" → list_watchlist
 - "recommend", "should I buy" → get_recommendation
-- "backtest" → run_backtest
+- "backtest runs", "list backtests", "backtest history", "backtest results" → list_backtest_runs
+- "run a backtest", "backtest [ticker]" → run_backtest
 - "candlebar", "price history", "ohlcv" → get_candlebar_data
 
 Rules:
