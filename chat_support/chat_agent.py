@@ -150,6 +150,7 @@ class ChatAgent:
             "BackTestResults": 10, "Recommendation": 9, "CandlebarData": 8,
             "TradeSetup": 7, "WatchlistEntry": 6, "PortfolioAccount": 5,
             "PMAgentRun": 4, "PMAgentRunList": 4,
+            "HoldingList": 3, "OpenHoldingList": 3, "TradeList": 3,
         }
         best_tool_msg = None
         best_score = -1
@@ -186,7 +187,7 @@ class ChatAgent:
 # Keys that carry large arrays and should be stripped from conversation history.
 # The full data is returned to the API caller; only a compact summary is kept
 # in MemorySaver so follow-up messages have clean, understandable context.
-_LARGE_KEYS = ("candle_data", "bars", "trades", "entries", "runs", "accounts")
+_LARGE_KEYS = ("candle_data", "bars", "trades", "entries", "runs", "accounts", "holdings")
 
 
 def _trim_tool_messages(graph, config: dict) -> None:
