@@ -7,6 +7,26 @@ from datetime import datetime, timezone
 from langchain_core.tools import tool
 
 from tools.db.pm_agent_runs import get_pm_run, list_pm_runs
+from tools.db.portfolio_data import get_account, list_accounts
+
+
+def _resolve_pm_account(account_id: str) -> tuple[str, str]:
+    """Resolve account_id or display_name to (uuid, display_name)."""
+    accounts = list_accounts()
+    if not accounts:
+        return account_id, ""
+    if not account_id:
+        a = accounts[0]
+        return a["id"], a["display_name"]
+    match = next((a for a in accounts if a["id"] == account_id), None)
+    if match is None:
+        match = next(
+            (a for a in accounts if account_id.lower() in a["display_name"].lower()),
+            None,
+        )
+    if match:
+        return match["id"], match["display_name"]
+    return account_id, ""
 
 
 @tool
@@ -26,7 +46,9 @@ def get_pm_run_result(run_id: str) -> dict:
     run = get_pm_run(run_id)
     if run is None:
         return {"responseType": "PMAgentRun", "error": f"Run '{run_id}' not found."}
-    return {"responseType": "PMAgentRun", "already_formatted": True, **run}
+    account = get_account(run["account_id"])
+    account_name = account["display_name"] if account else ""
+    return {"responseType": "PMAgentRun", "account_name": account_name, "already_formatted": True, **run}
 
 
 @tool
@@ -57,33 +79,20 @@ def list_pm_run_results(
     Returns:
         JSON with a list of run summaries, newest first.
     """
-    from tools.db.portfolio_data import list_accounts
-
-    # Resolve account_id — accept UUID, display_name, or empty (defaults to first)
-    accounts = list_accounts()
-    if not accounts:
+    if not list_accounts():
         return {"responseType": "PMAgentRunList", "error": "No portfolio accounts found."}
-    if not account_id:
-        account_id = accounts[0]["id"]
-    else:
-        # Try to match by display_name if the value isn't a UUID
-        match = next((a for a in accounts if a["id"] == account_id), None)
-        if match is None:
-            match = next(
-                (a for a in accounts if account_id.lower() in a["display_name"].lower()),
-                None,
-            )
-        account_id = match["id"] if match else account_id
 
+    resolved, account_name = _resolve_pm_account(account_id)
     from_dt = datetime.strptime(from_date, "%Y-%m-%d").replace(tzinfo=timezone.utc) if from_date else None
     to_dt   = datetime.strptime(to_date,   "%Y-%m-%d").replace(tzinfo=timezone.utc) if to_date   else None
 
-    runs = list_pm_runs(account_id, from_date=from_dt, to_date=to_dt, limit=limit)
+    runs = list_pm_runs(resolved, from_date=from_dt, to_date=to_dt, limit=limit)
     return {
-        "responseType":    "PMAgentRunList",
-        "account_id":      account_id,
-        "count":           len(runs),
-        "runs":            runs,
+        "responseType":      "PMAgentRunList",
+        "account_id":        resolved,
+        "account_name":      account_name,
+        "count":             len(runs),
+        "runs":              runs,
         "already_formatted": True,
     }
 

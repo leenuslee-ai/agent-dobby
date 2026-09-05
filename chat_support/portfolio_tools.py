@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from langchain_core.tools import tool
 
-from tools.db.portfolio_data import create_account, list_accounts
+from tools.db.portfolio_data import create_account, get_account, list_accounts
 from tools.db.trade_data import get_holdings, get_open_holdings, get_trades
 
 
@@ -70,15 +70,23 @@ def list_portfolio_accounts() -> dict:
         return {"responseType": "PortfolioAccountList", "status": "error", "error": str(e)}
 
 
-def _resolve_account_id(account_id: str) -> str:
-    """Resolve a display_name or UUID to an account UUID."""
+def _resolve_account(account_id: str) -> tuple[str, str]:
+    """Resolve a display_name or UUID to (account_uuid, display_name).
+
+    Falls back to the first account when account_id is empty.
+    """
     accounts = list_accounts()
     if not accounts:
-        return account_id
+        return account_id, ""
+    if not account_id:
+        a = accounts[0]
+        return a["id"], a["display_name"]
     match = next((a for a in accounts if a["id"] == account_id), None)
     if match is None:
         match = next((a for a in accounts if account_id.lower() in a["display_name"].lower()), None)
-    return match["id"] if match else account_id
+    if match:
+        return match["id"], match["display_name"]
+    return account_id, ""
 
 
 @tool
@@ -104,14 +112,13 @@ def get_portfolio_holdings(
         JSON with a list of holding records.
     """
     try:
-        accounts = list_accounts()
-        if not accounts:
+        resolved, account_name = _resolve_account(account_id)
+        if not resolved:
             return {"responseType": "HoldingList", "error": "No portfolio accounts found."}
-        resolved = _resolve_account_id(account_id) if account_id else accounts[0]["id"]
         rows = get_holdings(resolved, opening_transaction_type="BUY")
         if ticker:
             rows = [r for r in rows if r["ticker"] == ticker.upper()]
-        return {"responseType": "HoldingList", "account_id": resolved, "count": len(rows), "holdings": rows, "already_formatted": True}
+        return {"responseType": "HoldingList", "account_id": resolved, "account_name": account_name, "count": len(rows), "holdings": rows, "already_formatted": True}
     except Exception as e:
         return {"responseType": "HoldingList", "status": "error", "error": str(e)}
 
@@ -139,14 +146,13 @@ def get_open_portfolio_holdings(
         JSON with a list of open holding records.
     """
     try:
-        accounts = list_accounts()
-        if not accounts:
+        resolved, account_name = _resolve_account(account_id)
+        if not resolved:
             return {"responseType": "OpenHoldingList", "error": "No portfolio accounts found."}
-        resolved = _resolve_account_id(account_id) if account_id else accounts[0]["id"]
         rows = get_open_holdings(resolved, opening_transaction_type="BUY")
         if ticker:
             rows = [r for r in rows if r["ticker"] == ticker.upper()]
-        return {"responseType": "OpenHoldingList", "account_id": resolved, "count": len(rows), "holdings": rows, "already_formatted": True}
+        return {"responseType": "OpenHoldingList", "account_id": resolved, "account_name": account_name, "count": len(rows), "holdings": rows, "already_formatted": True}
     except Exception as e:
         return {"responseType": "OpenHoldingList", "status": "error", "error": str(e)}
 
@@ -181,10 +187,9 @@ def get_portfolio_trades(
         JSON with a list of trade transaction records.
     """
     try:
-        accounts = list_accounts()
-        if not accounts:
+        resolved, account_name = _resolve_account(account_id)
+        if not resolved:
             return {"responseType": "TradeList", "error": "No portfolio accounts found."}
-        resolved = _resolve_account_id(account_id) if account_id else accounts[0]["id"]
         from_dt = datetime.strptime(from_date, "%Y-%m-%d").replace(tzinfo=timezone.utc) if from_date else None
         to_dt   = datetime.strptime(to_date,   "%Y-%m-%d").replace(tzinfo=timezone.utc) if to_date   else None
         rows = get_trades(
@@ -194,7 +199,7 @@ def get_portfolio_trades(
             from_date=from_dt,
             to_date=to_dt,
         )
-        return {"responseType": "TradeList", "account_id": resolved, "count": len(rows), "trades": rows, "already_formatted": True}
+        return {"responseType": "TradeList", "account_id": resolved, "account_name": account_name, "count": len(rows), "trades": rows, "already_formatted": True}
     except Exception as e:
         return {"responseType": "TradeList", "status": "error", "error": str(e)}
 
