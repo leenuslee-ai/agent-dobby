@@ -34,6 +34,7 @@ from agents.buy_tech_evaluator_agent import BuyTechEvaluatorAgent
 from agents.current_holdings_evaluator_agent import CurrentHoldingsEvaluatorAgent
 from agents.evaluator_helpers import poll_order_status
 from tools.db.trade_data import get_open_holdings, save_trade
+from tools.db.portfolio_data import get_account
 from tools.db.watchlist_data import list_watchlist
 from tools.alpaca.trade_executor_tool import _get_client
 from alpaca.trading.requests import MarketOrderRequest
@@ -56,7 +57,8 @@ class PortfolioManagerAgent:
 
     def _get_available_cash(self) -> float:
         if MOCK_STOCKS_ENABLED:
-            return 10_000.0
+            account = get_account(self.account_id)
+            return float(account["cash"]) if account else 0.0
         try:
             return float(_get_client().get_account().buying_power)
         except Exception as e:

@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 
 from tools.db.session import get_session
-from tools.db.models import PortfolioHolding, PortfolioTransaction, CloseTradeReference
+from tools.db.models import PortfolioAccount, PortfolioHolding, PortfolioTransaction, CloseTradeReference
 
 
 # ── Serialisers ───────────────────────────────────────────────────────────────
@@ -183,8 +183,19 @@ def save_trade(
         else:
             close_ref_ids = _close_fifo(session, account_id, ticker, txn.id, qty, price, filled_at)
 
+        # Adjust account cash: BUY Open debits, SELL Close credits
+        trade_value = round(qty * price, 6)
+        account = session.query(PortfolioAccount).filter_by(id=account_id).first()
+        if account is not None:
+            if side == "BUY" and open_close == "Open":
+                account.cash = round((account.cash or 0.0) - trade_value, 6)
+            elif side == "SELL" and open_close == "Close":
+                account.cash = round((account.cash or 0.0) + trade_value, 6)
+
+        txn_id = txn.id  # capture before session closes
+
     result = {
-        "transaction_id": txn.id,
+        "transaction_id": txn_id,
         "open_close":     open_close,
         "ticker":         ticker,
         "side":           side,

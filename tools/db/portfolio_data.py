@@ -61,3 +61,32 @@ def list_accounts() -> list[dict]:
     with get_session() as session:
         rows = session.query(PortfolioAccount).order_by(PortfolioAccount.created_at).all()
         return [_to_dict(a) for a in rows]
+
+
+def get_account(account_id: str) -> dict | None:
+    """Return a single account by UUID, or None if not found."""
+    with get_session() as session:
+        row = session.query(PortfolioAccount).filter_by(id=account_id).first()
+        return _to_dict(row) if row else None
+
+
+def update_account_cash(account_id: str, delta: float) -> float:
+    """Add delta (positive or negative) to the account cash balance. Returns new balance."""
+    with get_session() as session:
+        account = session.query(PortfolioAccount).filter_by(id=account_id).first()
+        if account is None:
+            raise ValueError(f"Account '{account_id}' not found")
+        account.cash = round((account.cash or 0.0) + delta, 6)
+        session.flush()
+        return account.cash
+
+
+def set_account_cash(account_id: str, cash: float) -> float:
+    """Set the account cash balance to an exact value. Returns the new balance."""
+    with get_session() as session:
+        account = session.query(PortfolioAccount).filter_by(id=account_id).first()
+        if account is None:
+            raise ValueError(f"Account '{account_id}' not found")
+        account.cash = round(cash, 6)
+        session.flush()
+        return account.cash
