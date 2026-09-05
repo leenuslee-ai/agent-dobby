@@ -17,10 +17,7 @@ from langchain_core.tools import tool
 
 from backtest import get_ohlcv_with_indicators
 from .backtest_tools import run_backtest, list_backtest_runs, get_backtest_result
-from .portfolio_tools import (
-    create_portfolio_account, list_portfolio_accounts,
-    get_portfolio_holdings, get_open_portfolio_holdings, get_portfolio_trades,
-)
+from .portfolio_tools import PORTFOLIO_TOOLS
 from .pm_run_tools import get_pm_run_result, list_pm_run_results
 from .setup_tools import save_trade_setup, list_trade_setups, get_trade_setup
 from .watchlist_tools import add_watchlist_entry, update_watchlist_entry, list_watchlist
@@ -168,11 +165,7 @@ CHAT_AGENT_TOOLS = [
     list_backtest_runs,
     get_backtest_result,
     get_recommendation,
-    create_portfolio_account,
-    list_portfolio_accounts,
-    get_portfolio_holdings,
-    get_open_portfolio_holdings,
-    get_portfolio_trades,
+    *PORTFOLIO_TOOLS,
     get_pm_run_result,
     list_pm_run_results,
     save_trade_setup,
