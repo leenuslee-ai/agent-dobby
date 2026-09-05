@@ -149,6 +149,7 @@ class ChatAgent:
         _priority = {
             "BackTestResults": 10, "Recommendation": 9, "CandlebarData": 8,
             "TradeSetup": 7, "WatchlistEntry": 6, "PortfolioAccount": 5,
+            "PMAgentRun": 4, "PMAgentRunList": 4,
         }
         best_tool_msg = None
         best_score = -1

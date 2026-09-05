@@ -31,27 +31,36 @@ def get_pm_run_result(run_id: str) -> dict:
 
 @tool
 def list_pm_run_results(
-    account_id: str,
     from_date: str = "",
     to_date: str = "",
     limit: int = 20,
+    account_id: str = "",
 ) -> dict:
-    """List PortfolioManagerAgent run summaries for an account.
+    """List PortfolioManagerAgent run summaries, newest first.
 
     Use this when the user asks to review recent PM agent activity, e.g.:
-      - "Show me the last PM runs for account xyz"
-      - "List portfolio manager runs from September"
+      - "List portfolio manager runs"
+      - "Show me the PM runs from September"
       - "What did the agent do this week?"
 
     Args:
-        account_id: The portfolio account UUID.
         from_date:  Optional start date filter (YYYY-MM-DD).
         to_date:    Optional end date filter (YYYY-MM-DD).
         limit:      Max number of runs to return (default 20).
+        account_id: Optional portfolio account UUID. Defaults to the first account.
 
     Returns:
         JSON with a list of run summaries, newest first.
     """
+    from tools.db.portfolio_data import list_accounts
+
+    # Default to the first account if none specified
+    if not account_id:
+        accounts = list_accounts()
+        if not accounts:
+            return {"responseType": "PMAgentRunList", "error": "No portfolio accounts found."}
+        account_id = accounts[0]["id"]
+
     from_dt = datetime.strptime(from_date, "%Y-%m-%d").replace(tzinfo=timezone.utc) if from_date else None
     to_dt   = datetime.strptime(to_date,   "%Y-%m-%d").replace(tzinfo=timezone.utc) if to_date   else None
 
