@@ -54,12 +54,21 @@ def list_pm_run_results(
     """
     from tools.db.portfolio_data import list_accounts
 
-    # Default to the first account if none specified
+    # Resolve account_id — accept UUID, display_name, or empty (defaults to first)
+    accounts = list_accounts()
+    if not accounts:
+        return {"responseType": "PMAgentRunList", "error": "No portfolio accounts found."}
     if not account_id:
-        accounts = list_accounts()
-        if not accounts:
-            return {"responseType": "PMAgentRunList", "error": "No portfolio accounts found."}
         account_id = accounts[0]["id"]
+    else:
+        # Try to match by display_name if the value isn't a UUID
+        match = next((a for a in accounts if a["id"] == account_id), None)
+        if match is None:
+            match = next(
+                (a for a in accounts if account_id.lower() in a["display_name"].lower()),
+                None,
+            )
+        account_id = match["id"] if match else account_id
 
     from_dt = datetime.strptime(from_date, "%Y-%m-%d").replace(tzinfo=timezone.utc) if from_date else None
     to_dt   = datetime.strptime(to_date,   "%Y-%m-%d").replace(tzinfo=timezone.utc) if to_date   else None
