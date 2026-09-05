@@ -38,7 +38,8 @@ Tool selection guide:
 - "accounts", "what accounts" → list_portfolio_accounts
 - "watchlist" → list_watchlist
 - "recommend", "should I buy" → get_recommendation
-- "backtest runs", "list backtests", "backtest history", "backtest results" → list_backtest_runs
+- "backtest runs", "list backtests", "backtest history" → list_backtest_runs
+- "show backtest result", "get backtest id", "backtest run id" → get_backtest_result
 - "run a backtest", "backtest [ticker]" → run_backtest
 - "candlebar", "price history", "ohlcv" → get_candlebar_data
 
