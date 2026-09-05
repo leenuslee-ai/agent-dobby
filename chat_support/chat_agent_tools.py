@@ -16,11 +16,11 @@ from __future__ import annotations
 from langchain_core.tools import tool
 
 from backtest import get_ohlcv_with_indicators
-from .backtest_tools import run_backtest, list_backtest_runs, get_backtest_result
+from .backtest_tools import BACKTEST_TOOLS
 from .portfolio_tools import PORTFOLIO_TOOLS
-from .pm_run_tools import get_pm_run_result, list_pm_run_results
-from .setup_tools import save_trade_setup, list_trade_setups, get_trade_setup
-from .watchlist_tools import add_watchlist_entry, update_watchlist_entry, list_watchlist
+from .pm_run_tools import PM_RUN_TOOLS
+from .setup_tools import SETUP_TOOLS
+from .watchlist_tools import WATCHLIST_TOOLS
 
 
 # ── Tool: Candlebar data ──────────────────────────────────────────────────────
@@ -161,17 +161,10 @@ def get_recommendation(ticker: str) -> dict:
 
 CHAT_AGENT_TOOLS = [
     get_candlebar_data,
-    run_backtest,
-    list_backtest_runs,
-    get_backtest_result,
     get_recommendation,
+    *BACKTEST_TOOLS,
     *PORTFOLIO_TOOLS,
-    get_pm_run_result,
-    list_pm_run_results,
-    save_trade_setup,
-    list_trade_setups,
-    get_trade_setup,
-    add_watchlist_entry,
-    update_watchlist_entry,
-    list_watchlist,
+    *PM_RUN_TOOLS,
+    *SETUP_TOOLS,
+    *WATCHLIST_TOOLS,
 ]
