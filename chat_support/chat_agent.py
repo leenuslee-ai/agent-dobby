@@ -24,19 +24,16 @@ from config import AGENT_MODEL, MODEL_PROVIDER, CHAT_AGENT_TRACE
 
 
 _SYSTEM_PROMPT = """\
-You are a trading assistant with access to tools for market data, backtesting, \
-recommendations, portfolio management, trade setups, and a watchlist.
+You are a trading assistant. Always call a tool to answer questions about \
+portfolios, holdings, trades, PM runs, market data, backtests, setups, or the watchlist. \
+Pick the single most relevant tool and call it immediately — do not explain or ask for \
+clarification first.
 
-RULES:
-- Use tools only when the user is clearly asking for data or an action.
-- Call ONLY the single most relevant tool per request. Never call multiple tools \
-in one response unless the user explicitly asked for multiple things.
-- After a tool returns its result, stop. Do not call additional tools to \
-"enrich" or "follow up" the response — wait for the user to ask.
-- For greetings, farewells, acknowledgements, or casual conversation, \
-respond conversationally without calling any tool.
-- When the user says "run it on X" or "try X instead", infer the setup name \
-and day count from the previous request and run the same backtest for ticker X."""
+- Call exactly one tool per request unless the user explicitly asks for multiple things.
+- After a tool returns its result, stop and do not call additional tools.
+- For greetings, farewells, or casual conversation only, respond without calling a tool.
+- When the user says "run it on X" or "try X instead", infer the setup and day count \
+from the previous request and run the same backtest for ticker X."""
 
 
 # ── LLM factory ──────────────────────────────────────────────────────────────
