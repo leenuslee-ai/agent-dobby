@@ -16,7 +16,7 @@ import pandas as pd
 import requests
 import ta
 
-from config import ALPHAVANTAGE_API_KEY
+from config import ALPHAVANTAGE_API_KEY, MOCK_STOCKS
 
 CACHE_DIR = Path(__file__).parent / "cache"
 CACHE_DIR.mkdir(exist_ok=True)
@@ -28,6 +28,13 @@ _BASE = "https://www.alphavantage.co/query"
 def _fetch_daily_full(ticker: str) -> pd.DataFrame:
     """Fetch full daily OHLCV history from Alpha Vantage (up to 20 years)."""
     cache_file = CACHE_DIR / f"{ticker}_daily.csv"
+
+    # Mock tickers are pre-generated — always load from cache, never call API
+    if ticker.upper() in MOCK_STOCKS:
+        if not cache_file.exists():
+            raise RuntimeError(f"Mock data file not found for {ticker}: {cache_file}")
+        print(f"  [mock] Loading {ticker} from {cache_file}")
+        return pd.read_csv(cache_file, index_col=0, parse_dates=True)
 
     # Use cache if less than 1 day old
     if cache_file.exists():
