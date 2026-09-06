@@ -181,6 +181,6 @@ TRADING_TOOLS = [
 
 
 if __name__ == "__main__":
-    buy_market_order.invoke({"ticker":"MU", "qty": 10})
+    buy_market_order.invoke({"ticker":"TSLA", "qty": 10})
     print(get_account_info.invoke({}))
     print(get_positions.invoke({}))

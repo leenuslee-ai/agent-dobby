@@ -121,6 +121,8 @@ echo "PID: $!"
 
 tail -f logs/pm_simulation_sep.log
 
+MOCK_STOCKS_ENABLED=false python3 -m agents.portfolio_manager_agent ed36fd4a-b742-46c4-9733-b6b8f99f96db
+
 python3 -c "from tools.db.portfolio_data import set_account_cash; set_account_cash('ed36fd4a-b742-46c4-9733-b6b8f99f96db', 10000.0)"
 
 
@@ -130,4 +132,22 @@ npm run dev
 
 
 
-    
+
+PortfolioManagerAgent is currently plain Python — it orchestrates everything manually with ThreadPoolExecutor, direct method calls, and sequential loops. No LangGraph state machine, no LangChain tool binding.
+Whether to refactor depends on what you'd gain:
+
+Arguments for LangGraph:
+
+The current flow (evaluate holdings → research → tech eval → execute buys) is already a fixed pipeline with clear steps — LangGraph's state graph would make that structure explicit and inspectable
+You'd get built-in state persistence (checkpointing mid-run), which would help if a long simulation day crashes partway through
+Easier to add conditional branching later (e.g. "if market is down >2%, skip buys entirely")
+Consistent with how ChatAgent is built
+
+Arguments against:
+
+The current code is already well-structured and readable — run() is clean and the sub-steps are clear methods
+The parallelism (holdings eval in background while buy pipeline runs) would be awkward to express in LangGraph since it's inherently sequential node-to-node
+PortfolioManagerAgent doesn't do any LLM reasoning at the supervisor level — it's pure orchestration logic, which is where LangGraph adds the least value
+Refactoring introduces risk with no functional gain for the simulation
+
+My take: it's not worth it right now. LangGraph shines when an agent needs to reason about what to do next using an LLM. Here the flow is deterministic and the LLM calls are delegated to sub-agents (ResearchAgent, evaluators). The current structure is a better fit for the problem.
