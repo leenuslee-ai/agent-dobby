@@ -93,10 +93,13 @@ class PortfolioManagerAgent:
             return {"ticker": ticker, "recommendation": "WAIT", "reason": str(e)}
 
     def _run_research(self, tickers: list[str]) -> dict[str, dict]:
-        """Run ResearchAgent on all tickers in parallel. Returns {ticker: result}."""
-        print(f"\n[step 2b] Running ResearchAgent on {len(tickers)} tickers...")
+        """Run ResearchAgent on all tickers. Parallel for mock, sequential for Ollama."""
+        from config import MODEL_PROVIDER
+        # Ollama handles one request at a time — run sequentially to avoid deadlock
+        max_workers = min(len(tickers), 6) if MODEL_PROVIDER not in ("ollama", "qwen") else 1
+        print(f"\n[step 2b] Running ResearchAgent on {len(tickers)} tickers (workers={max_workers})...")
         research_map: dict[str, dict] = {}
-        with ThreadPoolExecutor(max_workers=min(len(tickers), 6)) as pool:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
             futures = {pool.submit(self._research_ticker, t): t for t in tickers}
             for f in as_completed(futures):
                 result = f.result()
