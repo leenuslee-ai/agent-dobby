@@ -83,12 +83,19 @@ class PortfolioManagerAgent:
         # In mock mode, skip the LLM call and pass straight to technical eval.
         if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
             return {"ticker": ticker, "recommendation": "BUY", "reason": "Mock stock — research skipped."}
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
         try:
-            result = self._research.analyze_recommendation(
-                f"Should I buy {ticker} right now? Check latest news and price."
-            )
+            with ThreadPoolExecutor(max_workers=1) as ex:
+                future = ex.submit(
+                    self._research.analyze_recommendation,
+                    f"Should I buy {ticker} right now? Check latest news and price.",
+                )
+                result = future.result(timeout=90)
             result["ticker"] = ticker
             return result
+        except FuturesTimeout:
+            print(f"  [{ticker}] Research timed out after 90s — defaulting to WAIT")
+            return {"ticker": ticker, "recommendation": "WAIT", "reason": "Research timed out."}
         except Exception as e:
             return {"ticker": ticker, "recommendation": "WAIT", "reason": str(e)}
 
