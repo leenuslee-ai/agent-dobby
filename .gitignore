@@ -226,3 +226,5 @@ chroma_db/
 # Logs and job state
 logs/
 jobs/.rag_ingester_state.json
+
+*.mov

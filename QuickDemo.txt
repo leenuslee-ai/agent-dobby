@@ -1,0 +1,16 @@
+- Add a setup "RSI_AND_SMA20" , Entry : RSI(14) is below 40 and SMA(20) > price , Exit : RSI (14) is above 64
+- list setups
+- view setup "RSI_AND_SMA"
+- Run a backtest for CRWD over the last 300 days using the `RSI_AND_SMA20` setup and show me the results.
+- Show Watch list
+- Add stock CRWD to watch list with setup RSI_AND_SMA
+- Show backtest runs 
+- View backtest result for id = ddc91054-7ea1-4a9a-9a16-94da5a0023ca
+- List accounts
+- View PM actions
+- View current holdings
+- View all holdings
+- Should I buy NVDA?
+
+
+

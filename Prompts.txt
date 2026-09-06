@@ -125,6 +125,7 @@ Also when we run simulation pm agent runs can it use a datetime value (of the ru
 
 --  The chat agent tools  get_portfolio_holdings, get_open_portfolio_holdings, get_portfolio_trades, get_pm_run_result, list_pm_run_results and the corresponding DB access methods don't include the account_name field.
     Let's add the account name field at the top level of the results - like the individual trades or holdings don't have to include account_name again and again. But the top level should include.
+    -- done
 
 
 

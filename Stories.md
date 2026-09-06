@@ -29,6 +29,9 @@
   ```
 
 - Save a setup called `EMA8_21_PB`: entry when price above SMA-50, EMA-8 above EMA-21, touched EMA-8, closed above EMA-8, ADX above 20. Exit when price below EMA-21 or RSI above 75. Stop loss 4%, take profit 10%, risk 2% of equity.
+
+- List setups 
+
 - View / Show setup `RSI_MACD_TREND`
 
 ### Backtests
