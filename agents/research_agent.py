@@ -68,27 +68,23 @@ def get_stock_price(ticker: str) -> str:
     """Get current price, 52-week high/low, and market cap for a ticker."""
     if MOCK_STOCKS_ENABLED and ticker.upper() in MOCK_STOCKS:
         return _get_mock_price(ticker.upper())
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
     try:
-        import signal
-
-        def _timeout(signum, frame):
-            raise TimeoutError("yfinance timed out")
-
-        signal.signal(signal.SIGALRM, _timeout)
-        signal.alarm(10)
-        try:
+        def _fetch():
             info = yf.Ticker(ticker).fast_info
             hist = yf.Ticker(ticker).history(period="1d")
             current = hist["Close"].iloc[-1] if not hist.empty else "N/A"
-            result = (
+            return (
                 f"{ticker}: price=${current:.2f}, "
                 f"52w_high=${info.year_high:.2f}, "
                 f"52w_low=${info.year_low:.2f}, "
                 f"market_cap=${info.market_cap/1e9:.1f}B"
             )
-        finally:
-            signal.alarm(0)
-        return result
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(_fetch)
+            return future.result(timeout=10)
+    except (FuturesTimeout, TimeoutError):
+        return f"Could not fetch price for {ticker}: timed out after 10s"
     except Exception as e:
         return f"Could not fetch price for {ticker}: {e}"
 
@@ -101,7 +97,7 @@ def _build_llm(tools: list):
     print(f"Using provider: {MODEL_PROVIDER} | agent model: {AGENT_MODEL}")
     if MODEL_PROVIDER in ("ollama", "qwen"):
         from langchain_ollama import ChatOllama
-        return ChatOllama(model=AGENT_MODEL).bind_tools(tools)
+        return ChatOllama(model=AGENT_MODEL, request_timeout=60).bind_tools(tools)
     else:
         from langchain_anthropic import ChatAnthropic
         return ChatAnthropic(
