@@ -160,11 +160,16 @@ def _build_graph():
 
 class ResearchAgent:
     def __init__(self):
-        self._graph = _build_graph()
+        self._graph = None  # built lazily on first use
+
+    def _get_graph(self):
+        if self._graph is None:
+            self._graph = _build_graph()
+        return self._graph
 
     def analyze(self, question: str) -> str:
         """Run the agent on a question and return the final text response."""
-        result = self._graph.invoke({"messages": [HumanMessage(content=question)]})
+        result = self._get_graph().invoke({"messages": [HumanMessage(content=question)]})
         return result["messages"][-1].content
 
     def analyze_recommendation(self, question: str) -> dict:
@@ -177,7 +182,7 @@ class ResearchAgent:
           - "What's your call on AMD — buy, sell, or hold?"
           - "Rate MSFT: buy or sell?"
         """
-        result = self._graph.invoke({
+        result = self._get_graph().invoke({
             "messages": [
                 SystemMessage(content=_RECOMMENDATION_PROMPT),
                 HumanMessage(content=question),
