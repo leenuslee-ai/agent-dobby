@@ -307,8 +307,8 @@ def run_simulation(start: date, end: date) -> list[dict]:
     prev_state = None
     results    = []
 
-    print(f"  {'Date':<12} {'State':<8} {'SPY':>8} {'QQQ':>8} {'Portfolio':>12}  Trades")
-    print(f"  {'-'*12} {'-'*8} {'-'*8} {'-'*8} {'-'*12}  ------")
+    print(f"  {'Date':<12} {'State':<8} {'SPY Qty':>8} {'SPY Val':>10} {'QQQ Qty':>8} {'QQQ Val':>10} {'Cash':>11} {'Portfolio':>12}  Trades")
+    print(f"  {'-'*12} {'-'*8} {'-'*8} {'-'*10} {'-'*8} {'-'*10} {'-'*11} {'-'*12}  ------")
 
     for sim_date in business_days:
         try:
@@ -333,6 +333,9 @@ def run_simulation(start: date, end: date) -> list[dict]:
 
         spy_qty = portfolio["SPY"]
         qqq_qty = portfolio["QQQ"]
+        spy_val = spy_qty * prices["SPY"]
+        qqq_val = qqq_qty * prices["QQQ"]
+        cash    = max(portfolio["cash"], 0.0)   # avoid -$0.00 from float drift
 
         trade_summary = ", ".join(
             f"{t['side']} {t['qty']:.2f} {t['ticker']}" for t in trades_today
@@ -340,19 +343,23 @@ def run_simulation(start: date, end: date) -> list[dict]:
 
         print(
             f"  {sim_date!s:<12} {state:<8} "
-            f"{spy_qty:>8.2f} {qqq_qty:>8.2f} "
-            f"${port_value:>11,.2f}  {trade_summary}"
+            f"{spy_qty:>8.2f} ${spy_val:>9,.2f} "
+            f"{qqq_qty:>8.2f} ${qqq_val:>9,.2f} "
+            f"${cash:>10,.2f} ${port_value:>11,.2f}  {trade_summary}"
         )
 
         results.append({
-            "date":        str(sim_date),
-            "state":       state,
-            "spy_price":   prices["SPY"],
-            "qqq_price":   prices["QQQ"],
-            "spy_qty":     spy_qty,
-            "qqq_qty":     qqq_qty,
+            "date":            str(sim_date),
+            "state":           state,
+            "spy_price":       prices["SPY"],
+            "qqq_price":       prices["QQQ"],
+            "spy_qty":         spy_qty,
+            "spy_value":       round(spy_val, 2),
+            "qqq_qty":         qqq_qty,
+            "qqq_value":       round(qqq_val, 2),
+            "cash":            round(cash, 2),
             "portfolio_value": round(port_value, 2),
-            "trades":      trades_today,
+            "trades":          trades_today,
         })
 
     # ── Summary ───────────────────────────────────────────────────────────────
