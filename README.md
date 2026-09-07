@@ -528,3 +528,5 @@ In mock mode:
 | **Scheduling** | `apscheduler`, `pytz` |
 | **RSS Parsing** | `feedparser` |
 | **Backtesting** | `backtesting` |
+
+https://youtu.be/D3oHm8Lo7_E
