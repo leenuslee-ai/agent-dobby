@@ -80,6 +80,10 @@ MOCK_SIMULATION_DATE: "date | None" = (
 # ── Alpaca ───────────────────────────────────────────────────────────────────
 ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY", "")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "")
+ALPACA_API_KEY_2    = os.getenv("ALPACA_API_KEY_2", "")
+ALPACA_SECRET_KEY_2 = os.getenv("ALPACA_SECRET_KEY_2", "")
+
 # Set ALPACA_PAPER=false in .env to trade live (use with caution)
 ALPACA_PAPER = os.getenv("ALPACA_PAPER", "true").lower() != "false"
+
 ALPACA_MCP_MODE = os.getenv("ALPACA_MCP_MODE", "true").lower() != "false"

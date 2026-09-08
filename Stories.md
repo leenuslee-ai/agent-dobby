@@ -93,6 +93,32 @@
 
 ## Useful Commands
 
+### SPY/QQQ Positional Trader
+
+```bash
+# Run once immediately (evaluate + execute now)
+python -m jobs.spyqqq_positional_trader --now
+
+# Run simulation (last 5 weeks ending 2026-09-01)
+python -m jobs.spyqqq_positional_trader --simulate
+
+# Run simulation with custom date range
+python -m jobs.spyqqq_positional_trader --simulate --start 2026-07-25 --end 2026-09-01
+
+# Start live scheduler in background (survives terminal close)
+nohup python3 -m jobs.spyqqq_positional_trader > logs/spyqqq.log 2>&1 &
+echo "PID: $!"
+
+# Tail the log
+tail -f logs/spyqqq.log
+
+# Stop the scheduler
+pkill -f spyqqq_positional_trader
+
+# Check if running
+pgrep -fl spyqqq_positional_trader
+```
+
 ### RAG Data Ingester
 
 ```bash

@@ -128,7 +128,51 @@ Also when we run simulation pm agent runs can it use a datetime value (of the ru
     -- done
 
 
+-- Let's add a SPYQQQPostionalTrader job in jobs folder to take care of the positional trading activity on two ETFs : 
+    - It should use ALPACA_API_KEY_2, ALPACA_SECRET_KEY_2 for accessing the second paper alpaca account for placing the market orders and getting account balance and holding details
+    - This job doesn't need to use LLM but it can use other frameworks like LangGraph, LangChain.
+    - Also no need to refer to any setups or watch list for this job.
+    - Basically this jobs manages just two tickers SPY and QQQ with the following strategy
+        State A: Aggressive Growth
+            Mathematical Condition: Both SPY and QQQ close above their respective daily 50-day EMAs.
+            Target Allocation: 50% SPY / 50% QQQ
+            Objective: Maximize exposure to tech-led bull runs while maintaining a diverse large-cap baseline.
+
+        State B: Defensive Value
+            Mathematical Condition: QQQ closes below its daily 50-day EMA, but SPY remains above its 50-day EMA.
+            Target Allocation: 100% SPY
+            Objective: Fully insulate capital from sector-specific technology liquidations by rotating entirely into the broader, more resilient index.
+            The condition can be the reverse as well SPY is below 50-day EMA but QQQ remains above. In this case the allocation should 100% QQQ.
+
+        State C: Capital Preservation
+            Mathematical Condition: Both SPY and QQQ close below their respective daily 50-day EMAs.
+            Target Allocation: 100% Cash / Short-Term T -Bills
+            Objective: Eliminate equity risk exposure completely to preserve principal capital during multi-month bear markets and systemic downturns.
 
 
+    - backtester and other agent codes like current_holdings_evaluator_agent, buy_tech_evaluator_agent, portfolio_manager_agent already use tools based on alpaca and alphavantage apis.
+    If I am not wrong the current the alphavantage API that reurns TIME_SERIES_DAILY data may not return the real time data for the current day. In that the TIME_SERIES_INTRADAY can be 
+    used to retrieve the upto the minute price data (or use another good API to get the curent price). For calculating the EMA for the current day we use the TIME_SERIES_INTRADAY to 
+    retrieve the 5 minute bars for today alone and calculate the EMA. 
+    - Necessary tool code can be added to the tools/alpaca and tools/alphavantage folder to keep this jobs code as minimum as possible. 
+    - Doing the evaluations can be done a few times during the day like once every hour and log the details 
+    - Actually Executing the trades has to be done exactly 30 minutes before market close.
+    - To run the job today.., let's simulate the run for the last 5 weeks, pretending the current date is Sep 1 2026.  
+    - Let's make the code as readable as possible
+
+    -- Done
+
+    # 5-week simulation (no Alpaca calls needed)
+    python3 -m jobs.spyqqq_positional_trader --simulate --start 2026-07-25 --end 2026-09-01
+    # One evaluation + immediate live trade
+    python3 -m jobs.spyqqq_positional_trader --now
+    # Live scheduler (hourly eval + 3:30 PM execution)
+    python3 -m jobs.spyqqq_positional_trader
+
+-- 
+    Let's analyse the portfolio_manager_agent code.. How can we introduce the Human In the Loop (HITL) concept ? 
+I am thinking like before executing any alpaca market orders the application can ask the  user to confirm ... 
+But again this is a fully autonomous background process. Just for the learning how to do that HITL in other applications 
+that I may implement that cannot be fully automated, I would like to get an idea.. Let's not make any code change this time,.
 
 
