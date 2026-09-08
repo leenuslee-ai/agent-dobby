@@ -7,9 +7,8 @@ each ticker's position relative to its 50-day exponential moving average:
   │ State   │ Name                   │ EMA-50 Condition                   │ Target Allocation    │
   ├─────────┼────────────────────────┼────────────────────────────────────┼──────────────────────┤
   │ A       │ Aggressive Growth      │ SPY above EMA-50 AND QQQ above     │ 50% SPY / 50% QQQ   │
-  │ B-SPY   │ Defensive Value        │ SPY above EMA-50, QQQ below        │ 100% SPY             │
-  │ B-QQQ   │ Defensive Value        │ QQQ above EMA-50, SPY below        │ 100% QQQ             │
-  │ C       │ Capital Preservation   │ SPY below EMA-50 AND QQQ below     │ 100% Cash            │
+  │ B       │ Defensive Value        │ SPY above EMA-50, QQQ below        │ 100% SPY             │
+  │ C       │ Capital Preservation   │ SPY below EMA-50 (regardless QQQ)  │ 100% Cash            │
   └─────────┴────────────────────────┴────────────────────────────────────┴──────────────────────┘
 
 EMA-50 is computed from the daily OHLCV history (Alpha Vantage, cached CSV).
@@ -124,19 +123,17 @@ def determine_state(snapshot: dict) -> tuple[str, dict[str, float]]:
     qqq_above = snapshot["QQQ"]["above_ema"]
 
     if spy_above and qqq_above:
-        return "A",     {"SPY": 0.50, "QQQ": 0.50}
+        return "A", {"SPY": 0.50, "QQQ": 0.50}
     if spy_above and not qqq_above:
-        return "B-SPY", {"SPY": 1.00, "QQQ": 0.00}
-    if qqq_above and not spy_above:
-        return "B-QQQ", {"SPY": 0.00, "QQQ": 1.00}
-    return     "C",     {"SPY": 0.00, "QQQ": 0.00}   # Capital Preservation — all cash
+        return "B", {"SPY": 1.00, "QQQ": 0.00}
+    # SPY below EMA-50 (whether QQQ is above or below) → preserve capital
+    return     "C", {"SPY": 0.00, "QQQ": 0.00}
 
 
 _STATE_NAMES = {
-    "A":     "Aggressive Growth",
-    "B-SPY": "Defensive Value (SPY)",
-    "B-QQQ": "Defensive Value (QQQ)",
-    "C":     "Capital Preservation",
+    "A": "Aggressive Growth",
+    "B": "Defensive Value (100% SPY)",
+    "C": "Capital Preservation (100% Cash)",
 }
 
 
