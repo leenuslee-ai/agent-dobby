@@ -438,7 +438,7 @@ def start_scheduler() -> None:
         ),
         id="spyqqq_evaluate",
         name="SPY/QQQ hourly evaluation",
-        misfire_grace_time=300,
+        misfire_grace_time=900,   # 15 min — covers late startup without re-firing stale slots
     )
 
     # Single daily execution at 3:30 PM ET.

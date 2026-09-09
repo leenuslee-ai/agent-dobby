@@ -169,6 +169,36 @@ Also when we run simulation pm agent runs can it use a datetime value (of the ru
     # Live scheduler (hourly eval + 3:30 PM execution)
     python3 -m jobs.spyqqq_positional_trader
 
+--- I ran this command yesterday and it seems to have done a few runs
+nohup python3 -m jobs.spyqqq_positional_trader > logs/spyqqq.log 2>&1 &
+Isn't that supposed to be running every working day ? I don't see any activity today ?
+
+    --For a permanent solution that survives reboots, you'd want to run it as a launchd service 
+    (the macOS equivalent of Linux systemd). Want me to set that up? It would auto-start on login and restart automatically if it crashes.
+        -- yes please.
+    --# Check if running
+    launchctl list | grep spyqqq
+    # View live logs
+    tail -f logs/spyqqq.log
+    # Stop the service
+    launchctl unload ~/Library/LaunchAgents/com.agentdobby.spyqqq-trader.plist
+    # Start it again
+    launchctl load ~/Library/LaunchAgents/com.agentdobby.spyqqq-trader.plist
+    # Restart (stop + start)
+    launchctl unload ~/Library/LaunchAgents/com.agentdobby.spyqqq-trader.plist
+    launchctl load ~/Library/LaunchAgents/com.agentdobby.spyqqq-trader.plist
+
+    It will now:
+
+    Start automatically every time you log in
+    Restart automatically if it crashes (after 10 seconds)
+    Survive terminal closes and sleep/wake cycles (reboots too)
+
+
+    That's it. The plist file stays on disk so you can re-enable it anytime with launchctl load. If you want to delete it permanently:
+        launchctl unload ~/Library/LaunchAgents/com.agentdobby.spyqqq-trader.plist
+        rm ~/Library/LaunchAgents/com.agentdobby.spyqqq-trader.plist
+
 -- 
     Let's analyse the portfolio_manager_agent code.. How can we introduce the Human In the Loop (HITL) concept ? 
 I am thinking like before executing any alpaca market orders the application can ask the  user to confirm ... 
